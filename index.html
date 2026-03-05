@@ -1,0 +1,656 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiteBuild — Labour ERP Elite</title>
+    <meta name="description"
+        content="Elite construction site labour, attendance, wage management and analytics system.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- face-api.js -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ── LOGIN SCREEN ── -->
+    <div id="login-screen" class="login-container">
+        <div class="glass-panel login-panel">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div class="login-logo-wrap">
+                    <span class="login-logo-icon">🏗️</span>
+                    <div class="login-logo-ring"></div>
+                </div>
+                <h1 style="margin-top: 1rem; font-size: 2.2rem;">SiteBuild ERP</h1>
+                <p class="header-sub" style="font-size:0.9rem; margin-top:0.3rem;">Elite Construction Management Suite
+                </p>
+            </div>
+            <form id="loginForm" class="login-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="input-group">
+                    <label for="loginUsername">Role</label>
+                    <select id="loginUsername" required>
+                        <option value="admin">👑 Admin (Full Access)</option>
+                        <option value="engineer">🔧 Site Engineer (Attendance Only)</option>
+                        <option value="accountant">💼 Accountant (Payments Only)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="loginPassword">Password <span style="color:var(--text-muted);font-size:0.75rem">(= role
+                            name)</span></label>
+                    <input type="password" id="loginPassword" required placeholder="Enter password">
+                </div>
+                <div id="loginErrorMsg"
+                    style="display: none; color: var(--danger); font-size: 0.85rem; background: rgba(239, 68, 68, 0.15); padding: 0.5rem 0.8rem; border-radius: 6px; border: 1px solid rgba(239,68,68,0.3)">
+                    ❌ Invalid credentials. Use role name as password.</div>
+                <button type="submit" class="btn-primary" style="margin-top: 0.5rem; padding: 0.85rem;">
+                    🔑 Login to Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" style="display: none;">
+
+        <!-- ── HEADER ── -->
+        <header>
+            <div class="header-content">
+                <span class="header-logo">🏗️</span>
+                <div>
+                    <h1>SiteBuild ERP</h1>
+                    <p class="header-sub" id="userRoleDisplay">Admin Mode</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="site-selector">
+                    <select id="activeSiteSelect" aria-label="Select Site" class="site-dropdown">
+                        <option value="">Loading sites...</option>
+                    </select>
+                </div>
+                <button id="themeToggle" class="icon-btn" title="Toggle theme">🌙</button>
+                <div id="dbStatus" class="badge">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting…</span>
+                </div>
+                <button id="logoutBtn" class="btn-outline-sm" title="Logout">Logout</button>
+            </div>
+        </header>
+
+        <!-- ── NAV TABS ── -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="dashboard" id="navDashboard">📊 Dashboard</button>
+            <button class="tab-btn" data-tab="workers" id="navWorkers">👷 Workers</button>
+            <button class="tab-btn" data-tab="attendance" id="navAttendance">📋 Attendance</button>
+            <button class="tab-btn" data-tab="payments" id="navPayments">💸 Payments</button>
+            <button class="tab-btn" data-tab="analytics" id="navAnalytics">📈 Analytics</button>
+        </nav>
+
+        <!-- ══════════════════════════════════════════
+             TAB: DASHBOARD
+        ══════════════════════════════════════════ -->
+        <div id="tab-dashboard" class="tab-content active">
+
+            <!-- Summary Cards Row -->
+            <div class="stats-row">
+                <div class="stat-card glass-panel accent-purple">
+                    <div class="stat-icon">💰</div>
+                    <div>
+                        <p class="stat-label">Total Labour Cost (Month)</p>
+                        <p class="stat-value" id="totalLiability">₹0.00</p>
+                    </div>
+                </div>
+                <div class="stat-card glass-panel accent-green">
+                    <div class="stat-icon">👷</div>
+                    <div>
+                        <p class="stat-label">Active Workers</p>
+                        <p class="stat-value" id="totalWorkers">0</p>
+                        <p class="stat-sub">On selected site</p>
+                    </div>
+                </div>
+                <div class="stat-card glass-panel accent-orange">
+                    <div class="stat-icon">🕒</div>
+                    <div>
+                        <p class="stat-label">Pending Payments</p>
+                        <p class="stat-value" id="pendingPaymentsAmount" style="color: var(--warning)">₹0.00</p>
+                    </div>
+                </div>
+                <div class="stat-card glass-panel accent-blue">
+                    <div class="stat-icon">📆</div>
+                    <div>
+                        <p class="stat-label">This Week's Payout</p>
+                        <p class="stat-value" id="weekPayable">₹0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Site Health Widget -->
+            <div id="siteHealthWidget" class="site-health-widget glass-panel">
+                <div class="health-indicator" id="healthIndicator">
+                    <span class="health-dot"></span>
+                    <span class="health-label" id="healthLabel">Analysing Site...</span>
+                </div>
+                <div class="health-stats">
+                    <span id="healthDailyBurn">Daily Burn: ₹0</span>
+                    <span id="healthDaysLeft">Days to Deadline: —</span>
+                    <span id="healthProjectedCost">Projected Total: ₹0</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Charts & Quick Actions -->
+            <div class="dashboard-grid">
+
+                <!-- Chart Section -->
+                <section class="glass-panel">
+                    <h3>📈 7-Day Payout Trend</h3>
+                    <div style="height: 250px; position:relative; width: 100%;">
+                        <canvas id="payoutChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Top Performers + Exports -->
+                <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                    <section class="glass-panel">
+                        <h3>🏆 Top Performers</h3>
+                        <div id="topPerformersList">
+                            <p class="empty-row"
+                                style="text-align:center; color:var(--text-muted); padding:1rem 0; font-size:0.85rem">No
+                                data yet</p>
+                        </div>
+                    </section>
+                    <section class="glass-panel export-section">
+                        <h3>📤 Export Reports</h3>
+                        <button class="btn-outline export-btn" id="exportWageLedger">📄 Export Wage Ledger</button>
+                        <button class="btn-outline export-btn" id="exportMonthlySummary">📊 Export Monthly
+                            Summary</button>
+                        <button class="btn-outline export-btn" id="exportAttendance">📋 Export Attendance
+                            Report</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Wage Ledger Table -->
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <div class="section-header">
+                    <h3>📒 Wage Ledger (Current Month)</h3>
+                    <div class="attendance-controls">
+                        <input type="text" id="searchLedger" placeholder="Search name..." class="search-input">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Skill</th>
+                                <th>Rate/Day</th>
+                                <th>Days (Mo)</th>
+                                <th>Advances</th>
+                                <th>Net Payable</th>
+                                <th>Slip</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerTbody">
+                            <tr>
+                                <td colspan="7" class="empty-row">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div><!-- /tab-dashboard -->
+
+
+        <!-- ══════════════════════════════════════════
+             TAB: WORKERS REGISTER
+        ══════════════════════════════════════════ -->
+        <div id="tab-workers" class="tab-content">
+
+            <section class="glass-panel" id="addWorkerSection">
+                <h3>➕ Add New Worker</h3>
+                <form id="addWorkerForm" class="quick-form-extended">
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="workerName" required placeholder="e.g. Suresh Yadav">
+                    </div>
+                    <div class="input-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="workerPhone" required placeholder="10-digit number">
+                    </div>
+                    <div class="input-group">
+                        <label>Skill / Category</label>
+                        <select id="workerCategory" required>
+                            <option value="Mason">🧱 Mason</option>
+                            <option value="Helper">🔨 Helper</option>
+                            <option value="Electrician">⚡ Electrician</option>
+                            <option value="Plumber">🚰 Plumber</option>
+                            <option value="Bar Bender">⛓️ Bar Bender</option>
+                            <option value="Painter">🎨 Painter</option>
+                            <option value="Carpenter">🪚 Carpenter</option>
+                            <option value="Welder">🔥 Welder</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Daily Wage ₹</label>
+                        <input type="number" id="workerRate" required min="1" step="0.01" placeholder="e.g. 500">
+                    </div>
+                    <div class="input-group">
+                        <label>Bank A/c or UPI</label>
+                        <input type="text" id="workerBank" placeholder="Optional">
+                    </div>
+                    <div class="input-group">
+                        <label>Joining Date</label>
+                        <input type="date" id="workerJoinDate" required>
+                    </div>
+                    <button type="submit" class="btn-primary submit-span-full">➕ Register Worker</button>
+                </form>
+                <div id="workerSuccessMsg" class="success-message"></div>
+            </section>
+
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <div class="section-header">
+                    <h3>👷 Worker Directory</h3>
+                    <div class="attendance-controls">
+                        <select id="filterCategory"
+                            style="padding: 0.3rem 0.6rem; font-size: 0.85rem; border-radius: 6px; background: rgba(0,0,0,0.2); color: inherit; border: 1px solid var(--border);">
+                            <option value="All">All Skills</option>
+                            <option value="Mason">Mason</option>
+                            <option value="Helper">Helper</option>
+                            <option value="Electrician">Electrician</option>
+                            <option value="Plumber">Plumber</option>
+                            <option value="Bar Bender">Bar Bender</option>
+                            <option value="Painter">Painter</option>
+                            <option value="Carpenter">Carpenter</option>
+                            <option value="Welder">Welder</option>
+                        </select>
+                        <select id="filterTier"
+                            style="padding: 0.3rem 0.6rem; font-size: 0.85rem; border-radius: 6px; background: rgba(0,0,0,0.2); color: inherit; border: 1px solid var(--border);">
+                            <option value="All">All Tiers</option>
+                            <option value="elite">💎 Elite</option>
+                            <option value="reliable">✅ Reliable</option>
+                            <option value="average">⚠️ Average</option>
+                        </select>
+                        <input type="text" id="searchWorker" placeholder="Search workers..." class="search-input">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name & Phone</th>
+                                <th>Skill</th>
+                                <th>Rate</th>
+                                <th>Joined</th>
+                                <th>Trust Score</th>
+                                <th>Status</th>
+                                <th id="actionHeaderWorker">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersTbody">
+                            <tr>
+                                <td colspan="7" class="empty-row">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div><!-- /tab-workers -->
+
+
+        <!-- ══════════════════════════════════════════
+             TAB: ATTENDANCE
+        ══════════════════════════════════════════ -->
+        <div id="tab-attendance" class="tab-content">
+
+            <!-- Ghost Attendance Section -->
+            <section class="glass-panel ghost-attendance-panel" id="ghostAttendanceSection">
+                <div class="section-header">
+                    <h3>📷 Smart Photo Attendance</h3>
+                    <span class="badge" style="font-size:0.75rem">AI-Powered</span>
+                </div>
+                <div class="ghost-layout">
+                    <div class="webcam-area">
+                        <video id="webcamFeed" autoplay playsinline muted></video>
+                        <canvas id="webcamCanvas" style="display:none;"></canvas>
+                        <div class="webcam-overlay" id="webcamOverlay">
+                            <span style="font-size:2.5rem">📷</span>
+                            <p>Click to enable camera</p>
+                        </div>
+                    </div>
+                    <div class="ghost-controls">
+                        <button id="startCameraBtn" class="btn-primary" style="width:100%">📷 Start Camera</button>
+                        <button id="capturePhotoBtn" class="btn-secondary" style="width:100%; display:none;">🔍 Detect
+                            Faces</button>
+                        <div id="detectedWorkersList" class="detected-list">
+                            <p style="color:var(--text-muted); font-size:0.85rem; text-align:center;">Start camera and
+                                capture to auto-detect workers</p>
+                        </div>
+                        <button id="markDetectedPresentBtn" class="btn-outline" style="width:100%; display:none;">✅ Mark
+                            All Detected as Present</button>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.8rem;">💡 Tip: First register a face
+                    for each worker using the button in their row, then use this to auto-mark attendance.</p>
+            </section>
+
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <div class="section-header">
+                    <h3>📋 Manual Attendance</h3>
+                    <div class="attendance-controls">
+                        <label style="color:var(--text-muted);font-size:.85rem">Date:</label>
+                        <input type="date" id="attendanceDate">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="attendance-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%">Worker</th>
+                                <th style="width: 45%">Status</th>
+                                <th style="width: 20%">Overtime (Hrs)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceListTbody">
+                            <tr>
+                                <td colspan="3" class="empty-row">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top:1rem;display:flex;gap:1rem;flex-wrap:wrap">
+                    <button id="saveAttendanceBtn" class="btn-primary" style="flex:1">
+                        ✅ Save Attendance
+                    </button>
+                    <button id="markAllPresentBtn" class="btn-outline" style="flex:1">
+                        ✔ Mark All Present
+                    </button>
+                </div>
+                <div id="attendanceSuccessMsg" class="success-message"></div>
+            </section>
+
+        </div><!-- /tab-attendance -->
+
+        <!-- ══════════════════════════════════════════
+             TAB: PAYMENTS & ADVANCES
+        ══════════════════════════════════════════ -->
+        <div id="tab-payments" class="tab-content">
+
+            <div class="dashboard-grid">
+                <!-- Advances -->
+                <section class="glass-panel" id="addAdvanceSection">
+                    <h3>💸 Record Advance Payment</h3>
+                    <form id="advanceForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Select Worker</label>
+                            <select id="advWorkerSelect" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Amount ₹</label>
+                            <input type="number" id="advAmount" required min="1" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Date</label>
+                            <input type="date" id="advDate" required>
+                        </div>
+                        <button type="submit" class="btn-secondary">Record Advance</button>
+                    </form>
+                    <div id="advSuccessMsg" class="success-message"></div>
+                </section>
+
+                <!-- Settle Payment -->
+                <section class="glass-panel" id="addPaymentSection">
+                    <h3>💳 Settle Payment</h3>
+                    <form id="paymentForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Select Worker</label>
+                            <select id="payWorkerSelect" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Settlement Amount ₹</label>
+                            <input type="number" id="payAmount" required min="1" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Date & Status</label>
+                            <div style="display:flex; gap:0.5rem">
+                                <input type="date" id="payDate" required style="flex:1">
+                                <select id="payStatus" style="flex:1">
+                                    <option value="Paid">Paid Fully</option>
+                                    <option value="Partial">Partial Pay</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Mark as Paid</button>
+                    </form>
+                    <div id="paySuccessMsg" class="success-message"></div>
+                </section>
+            </div>
+
+            <!-- Payment History -->
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <div class="section-header">
+                    <h3>📜 Transaction History</h3>
+                    <select id="historyFilter"
+                        style="padding: 0.3rem 0.6rem; font-size: 0.85rem; border-radius: 6px; background: rgba(0,0,0,0.2); color: inherit; border: 1px solid var(--border);">
+                        <option value="All">All Logs</option>
+                        <option value="Advances">Advances Only</option>
+                        <option value="Payments">Payments Only</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Worker</th>
+                                <th>Amount</th>
+                                <th>Status / Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTbody">
+                            <tr>
+                                <td colspan="5" class="empty-row">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div><!-- /tab-payments -->
+
+        <!-- ══════════════════════════════════════════
+             TAB: ANALYTICS
+        ══════════════════════════════════════════ -->
+        <div id="tab-analytics" class="tab-content">
+
+            <!-- Site Config for Forecast -->
+            <section class="glass-panel">
+                <h3>⚙️ Site Forecast Settings</h3>
+                <div class="analytics-settings-grid">
+                    <div class="input-group">
+                        <label>Project Deadline</label>
+                        <input type="date" id="projectDeadline">
+                    </div>
+                    <div class="input-group">
+                        <label>Total Budget ₹</label>
+                        <input type="number" id="projectBudget" min="1" step="1000" placeholder="e.g. 500000">
+                    </div>
+                    <div class="input-group">
+                        <label>Min Workers Required</label>
+                        <input type="number" id="minWorkers" min="1" step="1" placeholder="e.g. 10">
+                    </div>
+                    <button class="btn-primary" id="saveForecastSettings" style="align-self:flex-end">💾 Save
+                        Settings</button>
+                </div>
+            </section>
+
+            <!-- 4-Week Cash Flow Forecast -->
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <h3>💵 4-Week Cash Flow Forecast</h3>
+                <div class="forecast-summary-row" id="forecastSummaryRow">
+                    <div class="forecast-kpi">
+                        <span class="fkpi-label">Daily Burn Rate</span>
+                        <span class="fkpi-value" id="fkpiDailyBurn">₹0</span>
+                    </div>
+                    <div class="forecast-kpi">
+                        <span class="fkpi-label">Weekly Liability</span>
+                        <span class="fkpi-value" id="fkpiWeekly">₹0</span>
+                    </div>
+                    <div class="forecast-kpi">
+                        <span class="fkpi-label">Projected 4-Week Cost</span>
+                        <span class="fkpi-value" id="fkpi4Week">₹0</span>
+                    </div>
+                    <div class="forecast-kpi">
+                        <span class="fkpi-label">Budget Remaining</span>
+                        <span class="fkpi-value" id="fkpiBudgetLeft" style="color:var(--success)">₹0</span>
+                    </div>
+                </div>
+                <div style="height: 280px; position:relative; margin-top:1.5rem">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Worker Performance Leaderboard -->
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <div class="section-header">
+                    <h3>🏆 Worker Performance Leaderboard</h3>
+                    <button id="recalcScoresBtn" class="btn-outline-sm">🔄 Recalculate Scores</button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Worker</th>
+                                <th>Skill</th>
+                                <th>Punctuality</th>
+                                <th>Trust Score</th>
+                                <th>Tier</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardTbody">
+                            <tr>
+                                <td colspan="6" class="empty-row">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Material Estimator -->
+            <section class="glass-panel" style="margin-top:1.5rem">
+                <h3>🧱 Material Estimator</h3>
+                <div class="material-grid">
+                    <div class="material-card glass-panel" style="background:rgba(99,102,241,0.08)">
+                        <h4 style="margin-bottom:0.8rem; font-size:0.9rem">🏗️ Cement Calculator</h4>
+                        <div class="input-group" style="margin-bottom:0.6rem">
+                            <label>Bags of Cement</label>
+                            <input type="number" id="cementBags" placeholder="e.g. 50" min="0" step="1">
+                        </div>
+                        <div class="material-result" id="cementResult">
+                            <span>Volume: <strong id="cementM3">—</strong></span>
+                            <span>Weight: <strong id="cementKg">—</strong></span>
+                        </div>
+                    </div>
+                    <div class="material-card glass-panel" style="background:rgba(16,185,129,0.08)">
+                        <h4 style="margin-bottom:0.8rem; font-size:0.9rem">⛓️ Steel Calculator</h4>
+                        <div class="input-group" style="margin-bottom:0.6rem">
+                            <label>Weight (kg)</label>
+                            <input type="number" id="steelKg" placeholder="e.g. 1000" min="0" step="1">
+                        </div>
+                        <div class="input-group" style="margin-bottom:0.6rem">
+                            <label>Bar Diameter (mm)</label>
+                            <select id="steelDia">
+                                <option value="8">8 mm</option>
+                                <option value="10">10 mm</option>
+                                <option value="12" selected>12 mm</option>
+                                <option value="16">16 mm</option>
+                                <option value="20">20 mm</option>
+                                <option value="25">25 mm</option>
+                            </select>
+                        </div>
+                        <div class="material-result" id="steelResult">
+                            <span>Length: <strong id="steelLength">—</strong></span>
+                            <span>Bars (12m): <strong id="steelBars">—</strong></span>
+                        </div>
+                    </div>
+                    <div class="material-card glass-panel" style="background:rgba(245,158,11,0.08)">
+                        <h4 style="margin-bottom:0.8rem; font-size:0.9rem">🧊 Concrete Mix Volume</h4>
+                        <div class="input-group" style="margin-bottom:0.6rem">
+                            <label>Volume (m³)</label>
+                            <input type="number" id="concreteM3" placeholder="e.g. 10" min="0" step="0.1">
+                        </div>
+                        <div class="input-group" style="margin-bottom:0.6rem">
+                            <label>Mix Ratio</label>
+                            <select id="concreteRatio">
+                                <option value="1:1.5:3">M20 (1:1.5:3)</option>
+                                <option value="1:2:4" selected>M15 (1:2:4)</option>
+                                <option value="1:3:6">M10 (1:3:6)</option>
+                            </select>
+                        </div>
+                        <div class="material-result" id="concreteResult">
+                            <span>Cement: <strong id="concreteCement">—</strong></span>
+                            <span>Sand: <strong id="concreteSand">—</strong></span>
+                            <span>Aggregate: <strong id="concreteAgg">—</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /tab-analytics -->
+
+    </div><!-- /#app -->
+
+    <!-- ══════════════════════════════════════════
+         PAYOUT SLIP MODAL
+    ══════════════════════════════════════════ -->
+    <div id="payoutSlipModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box glass-panel">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin-bottom:0.2rem">💳 Payout Slip</h3>
+                    <p style="font-size:0.8rem; color:var(--text-muted)" id="slipPeriod">—</p>
+                </div>
+                <button class="icon-btn" id="closeSlipModal" title="Close">✕</button>
+            </div>
+            <div class="slip-worker-header">
+                <div class="slip-avatar" id="slipAvatar">?</div>
+                <div>
+                    <p class="slip-worker-name" id="slipWorkerName">—</p>
+                    <p class="slip-worker-cat" id="slipWorkerCat">—</p>
+                </div>
+            </div>
+            <div class="slip-table">
+                <div class="slip-row"><span>Days Worked</span><span id="slipDays">—</span></div>
+                <div class="slip-row"><span>Daily Rate</span><span id="slipRate">—</span></div>
+                <div class="slip-row"><span>Basic Wage</span><span id="slipBasic">—</span></div>
+                <div class="slip-row"><span>Overtime Pay</span><span id="slipOT">—</span></div>
+                <div class="slip-row deduction"><span>(-) Advances</span><span id="slipAdvances"
+                        style="color:var(--danger)">—</span></div>
+                <div class="slip-row total"><span>Net Payable</span><span id="slipNet"
+                        style="color:var(--success); font-weight:700">—</span></div>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1.4rem; flex-wrap:wrap">
+                <button class="btn-outline" id="copySlipBtn" style="flex:1">📋 Copy Message</button>
+                <button class="btn-primary" id="whatsappSlipBtn" style="flex:1">💬 Send via WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
