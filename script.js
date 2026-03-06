@@ -129,13 +129,25 @@ const loginForm = document.getElementById('loginForm');
 const loginScreen = document.getElementById('login-screen');
 const appContainer = document.getElementById('app');
 
+// Mock Authentication for Testing: Auto-login as Admin
+state.role = 'admin';
+if (document.getElementById('userRoleDisplay')) {
+    document.getElementById('userRoleDisplay').textContent = 'Admin Mode';
+}
+applyRoleRestrictions();
+if (loginScreen) loginScreen.style.display = 'none';
+if (appContainer) appContainer.style.display = 'block';
+window.dispatchEvent(new Event('resize'));
+initApp();
+
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('loginUsername').value;
         const pass = document.getElementById('loginPassword').value;
 
-        if (user === pass) {
+        // Mock authentication for testing: allow any password
+        if (true) {
             state.role = user;
             document.getElementById('userRoleDisplay').textContent =
                 user.charAt(0).toUpperCase() + user.slice(1) + ' Mode';
