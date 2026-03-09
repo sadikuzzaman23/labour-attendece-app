@@ -1,8 +1,8 @@
 ﻿import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 // ── SUPABASE CONF ──
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://iplgwdzvkrwhsacapzuq.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbGd3ZHp2a3J3aHNhY2FwenVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDg0MzEsImV4cCI6MjA4ODE4NDQzMX0.JvqeAXAUsgIaGZenln-_L7y_9MXfVKcdeDddJeP7xiA';
+const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 'https://iplgwdzvkrwhsacapzuq.supabase.co';
+const SUPABASE_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbGd3ZHp2a3J3aHNhY2FwenVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDg0MzEsImV4cCI6MjA4ODE4NDQzMX0.JvqeAXAUsgIaGZenln-_L7y_9MXfVKcdeDddJeP7xiA';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── DOM REFS ──
@@ -1239,6 +1239,17 @@ function calcConcrete() {
     document.getElementById('concreteSand').textContent = sand.toFixed(2) + ' m³';
     document.getElementById('concreteAgg').textContent = agg.toFixed(2) + ' m³';
 }
+
+// ── MIX DESIGN CALCULATOR ──
+const MIX_RATIOS = {
+    M15: { cement: 1, sand: 2, coarse: 4 },
+    M20: { cement: 1, sand: 1.5, coarse: 3 },
+    M25: { cement: 1, sand: 1, coarse: 2 }
+};
+const DENSITIES = { cement: 1440, sand: 1500, coarse: 1500 };
+const DRY_VOLUME_FACTOR = 1.54;
+
+// OLD MIX CALCULATOR REMOVED - NOW USING ADVANCED CALCULATOR (mix-app.js)
 
 // ── EXPORTS ──
 function downloadCsv(contents, filename) {

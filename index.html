@@ -10,10 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/mix-wizard.css">
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for Mix Design PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <!-- face-api.js -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
@@ -614,156 +618,475 @@
                 </div><!-- /tab-analytics -->
 
                 <!-- ══════════════════════════════════════════
-             TAB: MIX DESIGN CALCULATOR (NEW)
+             TAB: MIX DESIGN CALCULATOR — MixMaster Pro
         ══════════════════════════════════════════ -->
-                <div id="tab-mix-design" class="tab-content">
-                    <div class="mix-design-container glass-panel"
-                        style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-                        <!-- Ambient Glows -->
-                        <div
-                            style="position: absolute; top: -100px; left: -100px; width: 250px; height: 250px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; filter: blur(60px); animation: pulse 4s ease-in-out infinite;">
-                        </div>
-                        <div
-                            style="position: absolute; bottom: -100px; right: -100px; width: 250px; height: 250px; background: rgba(99, 102, 241, 0.2); border-radius: 50%; filter: blur(60px); animation: pulse 4s ease-in-out infinite; animation-delay: 2s;">
-                        </div>
+                <div id="tab-mix-design" class="tab-content" style="padding:0; background:transparent;">
 
-                        <div class="dashboard-grid" style="position: relative; z-index: 10;">
+                    <!-- TOAST (inside tab so it's scoped) -->
+                    <div id="toast-container" aria-live="polite"></div>
 
-                            <!-- Left Column: Inputs -->
-                            <div class="mix-inputs-col" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                                <div>
-                                    <h2
-                                        style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #60a5fa, #818cf8); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                                        Mix Design Calculator</h2>
-                                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">IS 10262
-                                        / ACI Standard Proportions</p>
-                                </div>
-
-                                <div class="input-group">
-                                    <label style="color: #a5b4fc; font-weight: 600;">Concrete Grade</label>
-                                    <select id="mixGrade"
-                                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.1); padding: 0.9rem; border-radius: 12px; font-weight: 500;">
-                                        <option value="M15">M15 (1:2:4)</option>
-                                        <option value="M20" selected>M20 (1:1.5:3)</option>
-                                        <option value="M25">M25 (1:1:2)</option>
-                                    </select>
-                                </div>
-
-                                <div class="input-group">
-                                    <label style="color: #a5b4fc; font-weight: 600;">Volume of Concrete (m³)</label>
-                                    <input type="number" id="mixVolume" step="0.1" min="0" placeholder="e.g. 10.5"
-                                        value="10"
-                                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.1); padding: 0.9rem; border-radius: 12px; font-weight: 500;">
-                                </div>
-
-                                <div class="input-group">
-                                    <label style="color: #a5b4fc; font-weight: 600;">Water-Cement Ratio (W/C)</label>
-                                    <input type="number" id="mixWcRatio" step="0.01" min="0" placeholder="e.g. 0.5"
-                                        value="0.5"
-                                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.1); padding: 0.9rem; border-radius: 12px; font-weight: 500;">
-                                </div>
+                    <!-- ANALYSIS OVERLAY -->
+                    <div class="analysis-overlay" id="analysis-overlay" aria-hidden="true">
+                        <div class="analysis-box">
+                            <div class="analysis-spinner">
+                                <div class="spinner-ring"></div>
+                                <div class="spinner-icon">⚗</div>
                             </div>
-
-                            <!-- Right Column: Outputs -->
-                            <div class="mix-outputs-col" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                    <!-- Cement Card -->
-                                    <div class="stat-card glass-panel"
-                                        style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 1.2rem; background: rgba(255,255,255,0.03);">
-                                        <h3
-                                            style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0;">
-                                            Cement</h3>
-                                        <p style="font-size: 1.8rem; font-weight: 700; color: #fff;">
-                                            <span id="outCementBags" style="transition: color 0.3s;">0</span>
-                                            <span
-                                                style="font-size: 0.85rem; font-weight: 400; color: var(--text-muted);">Bags
-                                                (50kg)</span>
-                                        </p>
-                                    </div>
-
-                                    <!-- Sand Card -->
-                                    <div class="stat-card glass-panel"
-                                        style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 1.2rem; background: rgba(255,255,255,0.03);">
-                                        <h3
-                                            style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0;">
-                                            Fine Aggregate</h3>
-                                        <p style="font-size: 1.8rem; font-weight: 700; color: #fff;">
-                                            <span id="outSandKg" style="transition: color 0.3s;">0</span>
-                                            <span
-                                                style="font-size: 0.85rem; font-weight: 400; color: var(--text-muted);">kg</span>
-                                        </p>
-                                    </div>
-
-                                    <!-- Coarse Card -->
-                                    <div class="stat-card glass-panel"
-                                        style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 1.2rem; background: rgba(255,255,255,0.03);">
-                                        <h3
-                                            style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0;">
-                                            Coarse Aggregate</h3>
-                                        <p style="font-size: 1.8rem; font-weight: 700; color: #fff;">
-                                            <span id="outCoarseKg" style="transition: color 0.3s;">0</span>
-                                            <span
-                                                style="font-size: 0.85rem; font-weight: 400; color: var(--text-muted);">kg</span>
-                                        </p>
-                                    </div>
-
-                                    <!-- Water Card -->
-                                    <div class="stat-card glass-panel"
-                                        style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 1.2rem; background: rgba(255,255,255,0.03);">
-                                        <h3
-                                            style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0;">
-                                            Water Amount</h3>
-                                        <p style="font-size: 1.8rem; font-weight: 700; color: #fff;">
-                                            <span id="outWaterLiters" style="transition: color 0.3s;">0</span>
-                                            <span
-                                                style="font-size: 0.85rem; font-weight: 400; color: var(--text-muted);">Liters</span>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <!-- ERP Integration Sync Card -->
-                                <div
-                                    style="flex: 1; background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(30, 58, 138, 0.4)); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 20px; padding: 1.5rem; backdrop-filter: blur(10px); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;">
-                                    <div
-                                        style="position: absolute; top: 0; right: 0; padding: 1rem; opacity: 0.2; transform: scale(3) translate(-10%, 10%); pointer-events: none;">
-                                        📦
-                                    </div>
-
-                                    <div>
-                                        <h3
-                                            style="color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                            <span
-                                                style="width: 8px; height: 8px; background: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; animation: pulse 2s infinite;"></span>
-                                            Material Requisition
-                                        </h3>
-                                        <p style="color: #e0e7ff; font-size: 0.85rem; margin-bottom: 1rem;">Total cement
-                                            requirement for today's pour. Validating stock limits with SiteBuild ERP
-                                            inventory module.</p>
-                                    </div>
-
-                                    <div>
-                                        <div
-                                            style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1rem;">
-                                            <span id="reqCementBags"
-                                                style="font-size: 2.5rem; font-weight: 800; color: white;">0</span>
-                                            <span style="color: #a5b4fc; font-size: 1rem;">Bags needed</span>
-                                        </div>
-                                        <button id="syncMixAttendanceBtn" class="btn-primary"
-                                            style="width: 100%; padding: 0.9rem; font-size: 1rem; background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 4px 15px rgba(99,102,241,0.4); border-radius: 12px; display: flex; justify-content: center; gap: 0.5rem; transition: transform 0.2s, background 0.2s;">
-                                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                                                </path>
-                                            </svg>
-                                            Sync with Attendance
-                                        </button>
-                                    </div>
-                                </div>
-
+                            <div class="analysis-title">Analysing Mix Parameters</div>
+                            <div class="analysis-steps">
+                                <div class="astep" id="ast-1">📐 Validating design inputs…</div>
+                                <div class="astep" id="ast-2">🎯 Computing target mean strength…</div>
+                                <div class="astep" id="ast-3">💧 Determining water content…</div>
+                                <div class="astep" id="ast-4">⚖ Calculating cement content…</div>
+                                <div class="astep" id="ast-5">🪨 Proportioning aggregates…</div>
+                                <div class="astep" id="ast-6">📊 Running absolute volume method…</div>
+                                <div class="astep done" id="ast-7">✅ Report ready!</div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- MAIN WIZARD SHELL -->
+                    <div class="wizard-shell">
+
+                        <!-- LEFT SIDEBAR -->
+                        <aside class="wizard-sidebar">
+                            <div class="sidebar-brand">
+                                <div class="brand-logo">⚗</div>
+                                <div class="brand-name">MixMaster<br><span>Pro</span></div>
+                            </div>
+                            <div class="sidebar-std">IS 10262:2019 · IS 456:2000</div>
+
+                            <nav class="sidebar-steps" id="sidebar-steps">
+                                <div class="ss-item" data-step="1">
+                                    <div class="ss-dot"><span>1</span></div>
+                                    <div class="ss-label">Grade &amp; Exposure</div>
+                                </div>
+                                <div class="ss-connector"></div>
+                                <div class="ss-item" data-step="2">
+                                    <div class="ss-dot"><span>2</span></div>
+                                    <div class="ss-label">Workability</div>
+                                </div>
+                                <div class="ss-connector"></div>
+                                <div class="ss-item" data-step="3">
+                                    <div class="ss-dot"><span>3</span></div>
+                                    <div class="ss-label">W/C Ratio</div>
+                                </div>
+                                <div class="ss-connector"></div>
+                                <div class="ss-item" data-step="4">
+                                    <div class="ss-dot"><span>4</span></div>
+                                    <div class="ss-label">Materials</div>
+                                </div>
+                                <div class="ss-connector"></div>
+                                <div class="ss-item" data-step="5">
+                                    <div class="ss-dot"><span>5</span></div>
+                                    <div class="ss-label">Generate Report</div>
+                                </div>
+                            </nav>
+
+                            <div class="sidebar-summary" id="sidebar-summary">
+                                <div class="ss-sum-title">Current Design</div>
+                                <div class="ss-sum-row" id="sum-grade">Grade: <strong>—</strong></div>
+                                <div class="ss-sum-row" id="sum-exposure">Exposure: <strong>—</strong></div>
+                                <div class="ss-sum-row" id="sum-slump">Slump: <strong>—</strong></div>
+                                <div class="ss-sum-row" id="sum-wc">W/C: <strong>—</strong></div>
+                                <div class="ss-sum-row" id="sum-placement">Method: <strong>—</strong></div>
+                            </div>
+
+                            <div class="sidebar-testcases">
+                                <div class="ss-sum-title">⚡ Quick Load</div>
+                                <button class="sc-btn" onclick="loadTestCase(1)">M25 · Mild</button>
+                                <button class="sc-btn" onclick="loadTestCase(2)">M30 · Moderate</button>
+                                <button class="sc-btn sc-btn-ref" onclick="loadTestCase(3)">M40 · Notebook ★</button>
+                                <button class="sc-btn sc-btn-clear" onclick="resetAll()">⟳ Reset All</button>
+                            </div>
+                        </aside>
+
+                        <!-- RIGHT PANEL -->
+                        <main class="wizard-main">
+                            <div class="wizard-progress-bar">
+                                <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                            </div>
+
+                            <!-- STEP 1: GRADE & EXPOSURE -->
+                            <div class="wizard-step active" id="step-1">
+                                <div class="step-header">
+                                    <div class="step-eyebrow">Step 1 of 5</div>
+                                    <h1 class="step-title">Concrete Grade &amp; Exposure</h1>
+                                    <p class="step-desc">Select the characteristic compressive strength and site
+                                        exposure condition as per IS 456:2000.</p>
+                                </div>
+                                <div class="step-body">
+                                    <div class="form-section">
+                                        <label class="form-label">Characteristic Strength (f<sub>ck</sub>)</label>
+                                        <div class="grade-grid" id="grade-selector">
+                                            <button class="grade-btn" data-val="M15">M15</button>
+                                            <button class="grade-btn" data-val="M20">M20</button>
+                                            <button class="grade-btn" data-val="M25">M25</button>
+                                            <button class="grade-btn" data-val="M30">M30</button>
+                                            <button class="grade-btn" data-val="M35">M35</button>
+                                            <button class="grade-btn" data-val="M40">M40</button>
+                                            <button class="grade-btn" data-val="M45">M45</button>
+                                            <button class="grade-btn" data-val="M50">M50</button>
+                                            <button class="grade-btn" data-val="M55">M55</button>
+                                            <button class="grade-btn" data-val="M60">M60</button>
+                                        </div>
+                                        <input type="hidden" id="fck" value="" />
+                                    </div>
+                                    <div class="form-row-2">
+                                        <div class="form-section">
+                                            <label class="form-label" for="exposure">Exposure Condition <span
+                                                    class="ref-tag">IS 456 Table-3</span></label>
+                                            <select id="exposure" class="form-select">
+                                                <option value="" disabled selected>— Select exposure —</option>
+                                                <option value="Mild">Mild</option>
+                                                <option value="Moderate">Moderate</option>
+                                                <option value="Severe">Severe</option>
+                                                <option value="Very Severe">Very Severe</option>
+                                                <option value="Extreme">Extreme</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-section">
+                                            <label class="form-label">Site Quality Control <span class="ref-tag">IS
+                                                    10262 Cl.4.2</span></label>
+                                            <div class="option-cards" id="site-control">
+                                                <label class="opt-card active">
+                                                    <input type="radio" name="site_control" value="Good" checked />
+                                                    <div class="opt-icon">🏗</div>
+                                                    <div class="opt-name">Good</div>
+                                                    <div class="opt-desc">S unchanged</div>
+                                                </label>
+                                                <label class="opt-card">
+                                                    <input type="radio" name="site_control" value="Fair" />
+                                                    <div class="opt-icon">🔧</div>
+                                                    <div class="opt-name">Fair</div>
+                                                    <div class="opt-desc">S + 1.0</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="limits-pill" id="exposure-limits" style="display:none">
+                                        <span>IS 456 limits for <strong id="exposure-label">—</strong>:</span>
+                                        <span class="lp-chip">Min C: <strong id="lim-cement">—</strong> kg/m³</span>
+                                        <span class="lp-chip">Max W/C: <strong id="lim-wc">—</strong></span>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <div class="footer-spacer"></div>
+                                    <button class="btn-next" onclick="goNext()">Next: Workability <span
+                                            class="btn-arrow">→</span></button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 2: WORKABILITY -->
+                            <div class="wizard-step" id="step-2">
+                                <div class="step-header">
+                                    <div class="step-eyebrow">Step 2 of 5</div>
+                                    <h1 class="step-title">Workability &amp; Placement</h1>
+                                    <p class="step-desc">Set the target slump, placement method, and cement grade.</p>
+                                </div>
+                                <div class="step-body">
+                                    <div class="form-section">
+                                        <label class="form-label">Target Slump <span class="ref-tag">IS 10262
+                                                Cl.5.3</span></label>
+                                        <div class="slump-control">
+                                            <div class="slump-display" id="slump-display">100 mm</div>
+                                            <input type="range" id="slump-range" value="100" min="25" max="200" step="5"
+                                                class="slump-slider" oninput="syncSlump(this.value)" />
+                                            <div class="slump-ticks">
+                                                <span>25</span><span>50</span><span>75</span><span>100</span><span>125</span><span>150</span><span>175</span><span>200</span>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="slump" value="100" />
+                                        <p class="field-hint">💡 IS 10262 base water is for 50 mm slump. Each +25 mm
+                                            above 50 mm adds 3% water.</p>
+                                    </div>
+                                    <div class="form-row-2">
+                                        <div class="form-section">
+                                            <label class="form-label">Placement Method <span class="ref-tag">IS 10262
+                                                    Cl.5.5.2</span></label>
+                                            <div class="option-cards" id="placement">
+                                                <label class="opt-card active">
+                                                    <input type="radio" name="placement" value="Pump" checked />
+                                                    <div class="opt-icon">🚰</div>
+                                                    <div class="opt-name">Pump</div>
+                                                    <div class="opt-desc">CA − 10%</div>
+                                                </label>
+                                                <label class="opt-card">
+                                                    <input type="radio" name="placement" value="Manual" />
+                                                    <div class="opt-icon">🪣</div>
+                                                    <div class="opt-name">Manual</div>
+                                                    <div class="opt-desc">No reduction</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-section">
+                                            <label class="form-label">Cement Grade</label>
+                                            <div class="option-cards" id="cement-grade">
+                                                <label class="opt-card">
+                                                    <input type="radio" name="cement_grade" value="OPC33" />
+                                                    <div class="opt-icon">🏛</div>
+                                                    <div class="opt-name">OPC 33</div>
+                                                    <div class="opt-desc">IS 269</div>
+                                                </label>
+                                                <label class="opt-card active">
+                                                    <input type="radio" name="cement_grade" value="OPC43" checked />
+                                                    <div class="opt-icon">🏗</div>
+                                                    <div class="opt-name">OPC 43</div>
+                                                    <div class="opt-desc">IS 8112</div>
+                                                </label>
+                                                <label class="opt-card">
+                                                    <input type="radio" name="cement_grade" value="OPC53" />
+                                                    <div class="opt-icon">⚡</div>
+                                                    <div class="opt-name">OPC 53</div>
+                                                    <div class="opt-desc">IS 12269</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <button class="btn-back" onclick="goBack()"><span class="btn-arrow">←</span> Grade
+                                        &amp; Exposure</button>
+                                    <button class="btn-next" onclick="goNext()">Next: W/C Ratio <span
+                                            class="btn-arrow">→</span></button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 3: W/C RATIO -->
+                            <div class="wizard-step" id="step-3">
+                                <div class="step-header">
+                                    <div class="step-eyebrow">Step 3 of 5</div>
+                                    <h1 class="step-title">Free W/C Ratio</h1>
+                                    <p class="step-desc">Enter the W/C ratio from IS 10262:2019 Figure-1.</p>
+                                </div>
+                                <div class="step-body">
+                                    <div class="wc-input-hero">
+                                        <div class="wc-chart-hint">
+                                            <div class="wc-chart-icon">📊</div>
+                                            <div class="wc-chart-text"><strong>How to read the chart:</strong><br>Find
+                                                your <em>f'ck (target mean strength)</em> on the X-axis.<br>Read the W/C
+                                                value from the curve for your cement grade.</div>
+                                        </div>
+                                        <div class="wc-enter-block">
+                                            <label class="form-label" for="wc_manual">W/C Ratio from IS 10262
+                                                Figure-1</label>
+                                            <input type="number" id="wc_manual" class="wc-big-input" placeholder="0.45"
+                                                step="0.01" min="0.28" max="0.65" oninput="updateWCStatus()" />
+                                            <div class="wc-status" id="wc-status">Enter the W/C value from the chart
+                                                above →</div>
+                                        </div>
+                                    </div>
+                                    <div class="wc-guide-row">
+                                        <div class="wc-guide-card">
+                                            <div class="wg-label">Typical W/C for OPC 43</div>
+                                            <div class="wg-vals">
+                                                <span>M25 → ~0.55</span><span>M30 → ~0.50</span>
+                                                <span>M35 → ~0.45</span><span>M40 → ~0.40</span>
+                                                <span>M45 → ~0.37</span><span>M50 → ~0.34</span>
+                                            </div>
+                                        </div>
+                                        <div class="wc-guide-card">
+                                            <div class="wg-label">IS 456 Maximum W/C <span
+                                                    class="ref-tag">Table-5</span></div>
+                                            <div class="wg-vals">
+                                                <span>Mild → 0.55</span><span>Moderate → 0.50</span>
+                                                <span>Severe → 0.45</span><span>V. Severe → 0.45</span>
+                                                <span>Extreme → 0.40</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <button class="btn-back" onclick="goBack()"><span class="btn-arrow">←</span>
+                                        Workability</button>
+                                    <button class="btn-next" onclick="goNext()">Next: Materials <span
+                                            class="btn-arrow">→</span></button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 4: MATERIAL PROPERTIES -->
+                            <div class="wizard-step" id="step-4">
+                                <div class="step-header">
+                                    <div class="step-eyebrow">Step 4 of 5</div>
+                                    <h1 class="step-title">Material Properties</h1>
+                                    <p class="step-desc">Specific gravities determine component volumes via the absolute
+                                        volume method.</p>
+                                </div>
+                                <div class="step-body">
+                                    <div class="form-row-2">
+                                        <div class="form-section">
+                                            <label class="form-label">Specific Gravities</label>
+                                            <div class="sg-list">
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">🏗 Cement</div><input type="number"
+                                                        id="sg_cement" value="3.15" step="0.01" min="2.8" max="3.3"
+                                                        class="sg-num" />
+                                                </div>
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">🪨 Coarse Agg</div><input type="number"
+                                                        id="sg_ca" value="2.72" step="0.01" min="2.4" max="3.0"
+                                                        class="sg-num" />
+                                                </div>
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">🏖 Fine Agg</div><input type="number"
+                                                        id="sg_fa" value="2.65" step="0.01" min="2.4" max="2.9"
+                                                        class="sg-num" />
+                                                </div>
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">⚗ Admixture</div><input type="number"
+                                                        id="sg_admix" value="1.21" step="0.01" min="1.0" max="1.5"
+                                                        class="sg-num" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-section">
+                                            <label class="form-label" for="fa_zone">FA Grading Zone <span
+                                                    class="ref-tag">IS 383</span></label>
+                                            <div class="zone-options">
+                                                <label class="zone-card"><input type="radio" name="fa_zone_r"
+                                                        value="zone_1" /><span>Zone
+                                                        I</span><small>Coarse</small></label>
+                                                <label class="zone-card"><input type="radio" name="fa_zone_r"
+                                                        value="zone_2" /><span>Zone II</span><small></small></label>
+                                                <label class="zone-card active"><input type="radio" name="fa_zone_r"
+                                                        value="zone_3" checked /><span>Zone
+                                                        III</span><small></small></label>
+                                                <label class="zone-card"><input type="radio" name="fa_zone_r"
+                                                        value="zone_4" /><span>Zone IV</span><small>Fine</small></label>
+                                            </div>
+                                            <input type="hidden" id="fa_zone" value="zone_3" />
+                                            <label class="form-label" style="margin-top:20px">Superplasticizer</label>
+                                            <div class="sg-list">
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">💊 Dosage</div>
+                                                    <div class="sg-with-unit"><input type="number" id="admix_dosage"
+                                                            value="1.2" step="0.1" min="0.5" max="3.0"
+                                                            class="sg-num" /><span class="sg-unit">% of C</span></div>
+                                                </div>
+                                                <div class="sg-row-w">
+                                                    <div class="sg-icon-label">💧 Water reduction</div>
+                                                    <div class="sg-with-unit"><input type="number" id="admix_reduction"
+                                                            value="25" step="1" min="20" max="30" class="sg-num" /><span
+                                                            class="sg-unit">%</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <button class="btn-back" onclick="goBack()"><span class="btn-arrow">←</span> W/C
+                                        Ratio</button>
+                                    <button class="btn-next" onclick="goNext()">Review &amp; Generate <span
+                                            class="btn-arrow">→</span></button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 5: REVIEW & GENERATE -->
+                            <div class="wizard-step" id="step-5">
+                                <div class="step-header">
+                                    <div class="step-eyebrow">Step 5 of 5 · Final Review</div>
+                                    <h1 class="step-title">Review &amp; Generate Report</h1>
+                                    <p class="step-desc">Confirm your inputs before running the IS 10262:2019
+                                        calculation engine.</p>
+                                </div>
+                                <div class="step-body">
+                                    <div class="review-grid" id="review-grid"></div>
+                                    <div class="generate-hero">
+                                        <div class="gh-text">
+                                            <div class="gh-icon">⚗</div>
+                                            <div><strong>Ready to compute?</strong><span>6-step IS 10262:2019 engine
+                                                    will run in seconds.</span></div>
+                                        </div>
+                                        <button class="btn-generate-big" id="btn-generate" onclick="generateReport()">🚀
+                                            Generate Report</button>
+                                    </div>
+                                    <div class="export-prefill">
+                                        <div class="form-row-3">
+                                            <div class="form-section-sm"><label class="form-label"
+                                                    for="proj-name">Project Name</label><input type="text"
+                                                    id="proj-name" placeholder="Site / project" class="form-input" />
+                                            </div>
+                                            <div class="form-section-sm"><label class="form-label"
+                                                    for="proj-engineer">Designed By</label><input type="text"
+                                                    id="proj-engineer" placeholder="Engineer name" class="form-input" />
+                                            </div>
+                                            <div class="form-section-sm"><label class="form-label"
+                                                    for="proj-date">Date</label><input type="date" id="proj-date"
+                                                    class="form-input" /></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <button class="btn-back" onclick="goBack()"><span class="btn-arrow">←</span>
+                                        Materials</button>
+                                    <div></div>
+                                </div>
+                            </div>
+
+                            <!-- RESULTS PAGE -->
+                            <div class="wizard-step results-page" id="results-page">
+                                <div class="results-topbar">
+                                    <button class="btn-back-sm" onclick="backToWizard()"><span>←</span> Edit
+                                        Inputs</button>
+                                    <div class="results-grade-pill" id="r-grade-pill">M—</div>
+                                    <button class="btn-export-sm" onclick="exportPDF()">⬇ PDF</button>
+                                </div>
+                                <div class="r-summary-row">
+                                    <div class="rsc"><span class="rsc-l">f'ck</span><span class="rsc-v"
+                                            id="res-fck">—</span><span class="rsc-u">N/mm²</span></div>
+                                    <div class="rsc"><span class="rsc-l">W/C</span><span class="rsc-v"
+                                            id="res-wc">—</span><span class="rsc-u">adopted</span></div>
+                                    <div class="rsc accent"><span class="rsc-l">Water</span><span class="rsc-v"
+                                            id="res-water">—</span><span class="rsc-u">kg/m³</span></div>
+                                    <div class="rsc accent"><span class="rsc-l">Cement</span><span class="rsc-v"
+                                            id="res-cement">—</span><span class="rsc-u">kg/m³</span></div>
+                                    <div class="rsc"><span class="rsc-l">Coarse Agg</span><span class="rsc-v"
+                                            id="res-ca">—</span><span class="rsc-u">kg/m³</span></div>
+                                    <div class="rsc"><span class="rsc-l">Fine Agg</span><span class="rsc-v"
+                                            id="res-fa">—</span><span class="rsc-u">kg/m³</span></div>
+                                </div>
+                                <div class="r-ratio-banner">
+                                    <span class="rrb-label">Mix Proportions C : W : FA : CA</span>
+                                    <span class="rrb-val" id="ratio-display">— : — : — : —</span>
+                                </div>
+                                <div class="r-two-col">
+                                    <div class="r-card">
+                                        <div class="r-card-title">Volumetric Distribution</div>
+                                        <div class="pie-wrap"><canvas id="mix-pie-chart"></canvas></div>
+                                    </div>
+                                    <div class="r-card">
+                                        <div class="r-card-title">Quantities per 1 m³</div>
+                                        <table class="qty-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Material</th>
+                                                    <th>kg/m³</th>
+                                                    <th>m³</th>
+                                                    <th>Ratio</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="results-tbody">
+                                                <tr>
+                                                    <td colspan="4" class="empty-cell">—</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="r-card r-full">
+                                    <div class="r-card-title">6-Step IS 10262 Derivation</div>
+                                    <div class="steps-accordion" id="steps-accordion"></div>
+                                </div>
+                                <div class="r-action-bar">
+                                    <button class="btn-secondary" onclick="resetAll()">⟳ Start New Design</button>
+                                    <button class="btn-primary" onclick="backToWizard()">← Edit &amp;
+                                        Recalculate</button>
+                                </div>
+                            </div>
+
+                        </main><!-- /wizard-main -->
+                    </div><!-- /wizard-shell -->
+
                 </div>
 
             </div><!-- /content-wrapper -->
@@ -805,6 +1128,8 @@
             </div>
         </div>
 
+        <script src="mix-engine.js"></script>
+        <script src="mix-app.js"></script>
         <script type="module" src="script.js"></script>
 </body>
 

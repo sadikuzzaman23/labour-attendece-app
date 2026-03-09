@@ -1,36 +1,41 @@
 @echo off
-title SiteBuild App Launcher
+title SiteBuild ERP — Launcher
 color 0A
 
-:: Ensure we are starting in the directory where the .bat file is located
+:: Run from the bat file's own directory
 cd /d "%~dp0"
 
-echo ===================================================
-echo Starting SiteBuild ERP...
-echo ===================================================
+echo ====================================================
+echo  SiteBuild Labour ERP Elite — Starting...
+echo ====================================================
 echo.
 
-:: Try opening through Node.js if installed
+:: Check for Node / npx
 where npx >nul 2>nul
 if %errorlevel% equ 0 (
-    echo [1/2] Node.js found. Starting local server...
-    start /b cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
-    echo [2/2] Server is running. Close this window to stop the server.
-    call npx -y serve . -l 3000
+    echo [1/2] Node.js found. Launching server on port 3333...
+    start /b cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:3333"
+    echo [2/2] Server running at http://localhost:3333
+    echo        Close this window to stop the server.
+    echo.
+    call npx -y serve . -l 3333
     exit
 )
 
-:: Try opening through Python if installed
+:: Fallback: Python
 python -c "exit()" >nul 2>nul
 if %errorlevel% equ 0 (
-    echo [1/2] Python found. Starting local server...
-    start /b cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:8000"
-    echo [2/2] Server is running. Close this window to stop the server.
-    python -m http.server 8000
+    echo [1/2] Python found. Launching server on port 3333...
+    start /b cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:3333"
+    echo [2/2] Server running at http://localhost:3333
+    echo        Close this window to stop the server.
+    echo.
+    python -m http.server 3333
     exit
 )
 
-:: Fallback: Open index.html directly
-echo Local server tools not found. Opening the app directly in browser...
-start "" "index.html"
+:: Last resort: open file directly
+echo No server tools found. Opening index.html directly...
+echo NOTE: Some features may not work without a local server.
+start "" "%~dp0index.html"
 exit
