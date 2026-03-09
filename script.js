@@ -25,6 +25,26 @@ let webcamStream = null;
 let faceApiLoaded = false;
 
 // ── APP STATE ──
+
+// ── DOM ELEMENTS: SIDEBAR & MIX DESIGN ──
+const sidebar = document.getElementById('sidebar');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mainLayout = document.getElementById('mainLayout');
+
+// Mobile Menu Toggle
+if (mobileMenuBtn && sidebar) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking outside on mobile
+    mainLayout.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target)) {
+            sidebar.classList.remove('open');
+        }
+    });
+}
 let state = {
     role: null,
     sites: [],
@@ -124,15 +144,51 @@ function tierBadge(tier) {
     return '<span class="tier-badge tier-average">⚠️ Average</span>';
 }
 
-// Auto initialize app
-state.role = 'admin';
-if (document.getElementById('userRoleDisplay')) {
-    document.getElementById('userRoleDisplay').textContent = 'Admin Mode';
-}
-applyRoleRestrictions();
-window.dispatchEvent(new Event('resize'));
-initApp();
+// ── AUTHENTICATION BYPASS (MOCK LOGIN) ──
+let isAppInitialized = false;
 
+// Remove all login overlay refs as they are deleted from HTML
+const appContainer = document.getElementById('app');
+
+// Automatically log the user in as admin and initialize the app
+function bypassLogin() {
+    appContainer.style.display = 'block';
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+
+    // Mock an admin role
+    state.role = 'admin';
+
+    const roleLabels = {
+        'admin': 'Admin Mode',
+        'engineer': 'Site Engineer',
+        'accountant': 'Accountant Mode'
+    };
+    if (document.getElementById('userRoleDisplay')) {
+        document.getElementById('userRoleDisplay').textContent = roleLabels[state.role];
+    }
+
+    applyRoleRestrictions();
+    window.dispatchEvent(new Event('resize'));
+
+    if (!isAppInitialized) {
+        isAppInitialized = true;
+        initApp();
+    }
+}
+
+// Start app immediately
+document.addEventListener("DOMContentLoaded", () => {
+    bypassLogin();
+});
+
+const defaultLogoutBtn = document.getElementById('logoutBtn');
+if (defaultLogoutBtn) {
+    defaultLogoutBtn.addEventListener('click', () => {
+        alert("Logout disabled in mock mode.");
+    });
+}
 
 function applyRoleRestrictions() {
     if (state.role === 'engineer') {
@@ -146,7 +202,6 @@ function applyRoleRestrictions() {
         document.getElementById('ghostAttendanceSection').style.display = 'none';
     }
 }
-
 
 
 // ── THEME ──
@@ -175,6 +230,12 @@ navTabs.forEach(btn => {
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'analytics') renderAnalytics();
+        if (btn.dataset.tab === 'mix-design') calculateMixDesign(); // Run initial calc on open
+
+        // Auto close sidebar on mobile if opened
+        if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
     });
 });
 

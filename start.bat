@@ -2,6 +2,9 @@
 title SiteBuild App Launcher
 color 0A
 
+:: Ensure we are starting in the directory where the .bat file is located
+cd /d "%~dp0"
+
 echo ===================================================
 echo Starting SiteBuild ERP...
 echo ===================================================
@@ -11,7 +14,7 @@ echo.
 where npx >nul 2>nul
 if %errorlevel% equ 0 (
     echo [1/2] Node.js found. Starting local server...
-    start http://localhost:3000
+    start /b cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
     echo [2/2] Server is running. Close this window to stop the server.
     call npx -y serve . -l 3000
     exit
@@ -21,7 +24,7 @@ if %errorlevel% equ 0 (
 python -c "exit()" >nul 2>nul
 if %errorlevel% equ 0 (
     echo [1/2] Python found. Starting local server...
-    start http://localhost:8000
+    start /b cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:8000"
     echo [2/2] Server is running. Close this window to stop the server.
     python -m http.server 8000
     exit
@@ -29,5 +32,5 @@ if %errorlevel% equ 0 (
 
 :: Fallback: Open index.html directly
 echo Local server tools not found. Opening the app directly in browser...
-start "" "%~dp0index.html"
+start "" "index.html"
 exit
