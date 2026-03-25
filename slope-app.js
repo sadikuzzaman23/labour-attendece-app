@@ -7,13 +7,15 @@ let appState = {
 };
 
 // Graphics Instances
-let beamGfx, sfdGfx, bmdGfx;
+window.beamGfx = null;
+window.sfdGfx = null;
+window.bmdGfx = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Graphics
-    beamGfx = new BeamGraphics('sd-beam-canvas', 'beam');
-    sfdGfx = new BeamGraphics('sd-sfd-canvas', 'sfd');
-    bmdGfx = new BeamGraphics('sd-bmd-canvas', 'bmd');
+    window.beamGfx = new BeamGraphics('sd-beam-canvas', 'beam');
+    window.sfdGfx = new BeamGraphics('sd-sfd-canvas', 'sfd');
+    window.bmdGfx = new BeamGraphics('sd-bmd-canvas', 'bmd');
 
     // DOM Elements
     const studentToggle = document.getElementById('sd-student-mode');
@@ -255,20 +257,20 @@ window.removeLoad = function(idx) {
     clearResults();
 }
 
-function drawAll() {
-    beamGfx.drawBeam(appState.spans, appState.nodes, appState.loads);
+window.drawAll = function() {
+    window.beamGfx.drawBeam(appState.spans, appState.nodes, appState.loads);
 }
 
 function clearResults() {
-    sfdGfx.clear();
-    bmdGfx.clear();
+    window.sfdGfx.clear();
+    window.bmdGfx.clear();
     appState.lastResults = null;
     document.getElementById('sd-solution-panel').style.display = 'none';
 }
 
 function renderDiagrams(results) {
-    sfdGfx.drawDiagram(results.sfd, results.maxShear, results.totalLength, 'rgba(239, 68, 68, 1)'); // Red for shear
-    bmdGfx.drawDiagram(results.bmd, results.maxMoment, results.totalLength, 'rgba(59, 130, 246, 1)'); // Blue for BMD
+    window.sfdGfx.drawDiagram(results.sfd, results.maxShear, results.totalLength, 'rgba(239, 68, 68, 1)'); // Red for shear
+    window.bmdGfx.drawDiagram(results.bmd, results.maxMoment, results.totalLength, 'rgba(59, 130, 246, 1)'); // Blue for BMD
 }
 
 function renderSolution(steps) {

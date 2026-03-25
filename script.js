@@ -202,6 +202,7 @@ function bypassLogin() {
     if (!isAppInitialized) {
         isAppInitialized = true;
         initApp();
+        initSiteLogic();
     }
 }
 
@@ -256,8 +257,21 @@ navTabs.forEach(btn => {
         tabContents.forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'overview') renderOverview();
         if (btn.dataset.tab === 'analytics') renderAnalytics();
-        if (btn.dataset.tab === 'mix-design' && typeof calculateMixDesign === 'function') calculateMixDesign(); // Run initial calc on open
+        if (btn.dataset.tab === 'mix-design' && typeof calculateMixDesign === 'function') calculateMixDesign();
+        
+        // Handle Slope Deflection tab activation
+        if (btn.dataset.tab === 'slope-deflection') {
+            setTimeout(() => {
+                if (window.beamGfx && window.sfdGfx && window.bmdGfx) {
+                    window.beamGfx.resize();
+                    window.sfdGfx.resize();
+                    window.bmdGfx.resize();
+                    if (typeof window.drawAll === 'function') window.drawAll();
+                }
+            }, 50);
+        }
 
         // Isolate the mix design wizard by hiding the main app frame
         if (btn.dataset.tab === 'mix-design') {
@@ -299,6 +313,7 @@ async function initApp() {
         state.activeSiteId = state.sites[0].id;
         activeSiteSelect.value = state.activeSiteId;
         loadForecastSettings();
+        await renderOverview();
         await refreshSiteData();
     }
 }
@@ -319,6 +334,165 @@ activeSiteSelect.addEventListener('change', async (e) => {
     loadForecastSettings();
     await refreshSiteData();
 });
+
+// ── OVERVIEW (MULTI-SITE) ──
+async function renderOverview() {
+    console.log("Rendering Overview...");
+    const overviewGrid = document.getElementById('sitesOverviewGrid');
+    if (!overviewGrid) return;
+
+    overviewGrid.innerHTML = '<div class="empty-row" style="grid-column: 1/-1;">Fetching global data...</div>';
+
+    // Update current date display
+    const dateDisplay = document.getElementById('currentDateDisplay');
+    if (dateDisplay) dateDisplay.textContent = formatDate(TODAY);
+
+    try {
+        // Fetch ALL workers and TODAY'S attendance for ALL sites
+        // Since we might have many workers, we'll do this once
+        const [{ data: allWorkers }, { data: todayAttendance }] = await Promise.all([
+            supabase.from('workers').select('id, site_id, daily_rate, is_active'),
+            supabase.from('attendance').select('worker_id, status').eq('date', TODAY)
+        ]);
+
+        if (!allWorkers) return;
+
+        let globalTotalWorkers = allWorkers.filter(w => w.is_active).length;
+        let globalPresentToday = 0;
+        let globalDailyBurn = 0;
+
+        const siteSummaries = state.sites.map(site => {
+            const siteWorkers = allWorkers.filter(w => w.site_id === site.id && w.is_active);
+            const siteWorkerIds = siteWorkers.map(w => w.id);
+            const siteAttendance = (todayAttendance || []).filter(a => siteWorkerIds.includes(a.worker_id));
+            
+            const presentCount = siteAttendance.reduce((sum, a) => sum + Number(a.status), 0);
+            const siteBurn = siteWorkers.reduce((sum, w) => sum + Number(w.daily_rate), 0);
+
+            globalPresentToday += presentCount;
+            globalDailyBurn += siteBurn;
+
+            const attPercentage = siteWorkers.length > 0 
+                ? Math.round((presentCount / siteWorkers.length) * 100) 
+                : 0;
+
+            return {
+                ...site,
+                totalWorkers: siteWorkers.length,
+                presentCount,
+                attPercentage,
+                burn: siteBurn
+            };
+        });
+
+        // Update Global KPIs
+        document.getElementById('globalTotalSites').textContent = state.sites.length;
+        document.getElementById('globalTotalWorkers').textContent = globalTotalWorkers;
+        document.getElementById('globalPresentToday').textContent = globalPresentToday;
+        document.getElementById('globalDailyBurn').textContent = fmtShort(globalDailyBurn);
+
+        // Render Cards
+        overviewGrid.innerHTML = siteSummaries.map(s => `
+            <div class="site-overview-card glass-panel" onclick="window.switchToSite('${s.id}')">
+                <div class="site-card-header">
+                    <div>
+                        <h4>${esc(s.name)}</h4>
+                        <span class="site-location">📍 ${esc(s.location || 'Unknown')}</span>
+                    </div>
+                    <span class="badge ${s.attPercentage > 80 ? 'ready' : ''}" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
+                        ${s.attPercentage > 0 ? 'Active' : 'No Data'}
+                    </span>
+                </div>
+                <div class="site-attendance-stats">
+                    <div class="attendance-circle" style="border-color: ${s.attPercentage > 80 ? 'var(--success)' : (s.attPercentage > 50 ? 'var(--warning)' : 'var(--danger)')}">
+                        ${s.attPercentage}%
+                    </div>
+                    <div class="site-mini-stats">
+                        <div class="mini-stat">
+                            <span class="mini-stat-val">${s.totalWorkers}</span>
+                            <span class="mini-stat-label">Total</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-val">${s.presentCount}</span>
+                            <span class="mini-stat-label">Present</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="site-card-footer">
+                    <span class="site-burn-tag">${fmtShort(s.burn)} <small style="color:var(--text-muted)">/ day</small></span>
+                    <button class="btn-outline-sm">Open Site →</button>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error('Overview render error:', err);
+        overviewGrid.innerHTML = '<div class="empty-row" style="grid-column: 1/-1; color: var(--danger);">Failed to load overview data.</div>';
+    }
+}
+
+window.switchToSite = async (siteId) => {
+    state.activeSiteId = siteId;
+    activeSiteSelect.value = siteId;
+    loadForecastSettings();
+    await refreshSiteData();
+    
+    // Switch to Dashboard Tab
+    const dashBtn = document.querySelector('.tab-btn[data-tab="dashboard"]');
+    if (dashBtn) dashBtn.click();
+};
+
+// ── ADD SITE LOGIC ──
+function initSiteLogic() {
+    const addSiteBtn = document.getElementById('addSiteBtn');
+    const addSiteModal = document.getElementById('addSiteModal');
+    const saveSiteBtn = document.getElementById('saveSiteBtn');
+    const cancelSiteBtn = document.getElementById('cancelSiteBtn');
+
+    if (addSiteBtn) {
+        addSiteBtn.addEventListener('click', () => {
+            document.getElementById('newSiteName').value = '';
+            document.getElementById('newSiteLoc').value = '';
+            addSiteModal.style.display = 'flex';
+        });
+    }
+
+
+    if (cancelSiteBtn) {
+        cancelSiteBtn.addEventListener('click', () => {
+            addSiteModal.style.display = 'none';
+        });
+    }
+
+    if (saveSiteBtn) {
+        saveSiteBtn.addEventListener('click', async () => {
+            const nameValue = document.getElementById('newSiteName').value.trim();
+            const locValue = document.getElementById('newSiteLoc').value.trim();
+
+            if (!nameValue) return alert('Please enter a site name');
+
+            setStatus('Creating site...', false);
+            const { data, error } = await supabase
+                .from('sites')
+                .insert({ name: nameValue, location: locValue })
+                .select();
+
+            if (error) {
+                alert('Error creating site: ' + error.message);
+                setStatus('Connection Error', false);
+            } else if (data && data[0]) {
+                state.sites.push(data[0]);
+                renderSiteSelector();
+                state.activeSiteId = data[0].id;
+                activeSiteSelect.value = state.activeSiteId;
+                addSiteModal.style.display = 'none';
+                await renderOverview();
+                await refreshSiteData();
+                setStatus('Connected ✅', true);
+            }
+        });
+    }
+}
 
 // ── DATA REFRESH ──
 async function refreshSiteData() {
