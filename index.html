@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/mix-wizard.css">
     <link rel="stylesheet" href="css/slope-deflection.css">
+    <link rel="stylesheet" href="css/estimate.css">
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js -->
@@ -63,6 +64,9 @@
                     </button>
                     <button class="tab-btn" data-tab="slope-deflection" id="navSlopeDeflection">
                         <span class="nav-icon">📐</span> Slope Deflection
+                    </button>
+                    <button class="tab-btn" data-tab="estimate-calculator" id="navEstimateCalculator">
+                        <span class="nav-icon">🧮</span> Estimate Calculator
                     </button>
                 </nav>
             </aside>
@@ -1209,6 +1213,288 @@
                     </div>
                 </div><!-- /tab-slope-deflection -->
 
+                <!-- ══════════════════════════════════════════
+                     TAB: ESTIMATE CALCULATOR — Dynamic Blueprint Estimator
+                ══════════════════════════════════════════ -->
+                <div id="tab-estimate-calculator" class="tab-content" style="padding:0; background:transparent;">
+                    <div class="est-wrapper">
+
+                        <!-- Header with method toggle -->
+                        <div class="est-header">
+                            <div class="est-title">🗺️ Dynamic Blueprint Estimator</div>
+                            <div class="est-method-switch">
+                                <button class="est-method-btn active" id="est-btn-sl">📐 Short &amp; Long Wall</button>
+                                <button class="est-method-btn" id="est-btn-cl">📏 Centre Line</button>
+                            </div>
+                        </div>
+
+                        <!-- ══ SHORT & LONG WALL PANEL ══ -->
+                        <div id="est-panel-sl">
+                            <div class="est-grid">
+
+                                <!-- LEFT: LEVEL-SYNC SIDEBAR -->
+                                <div class="est-sidebar">
+                                    <!-- Step 1: Foundation -->
+                                    <div class="est-glass-card level-foundation">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Step 1 — Foundation Trench</span>
+                                        </div>
+                                        <div class="est-room-inputs">
+                                            <div class="est-field">
+                                                <label>Room Length (m)</label>
+                                                <input type="number" id="e-room-l" value="5" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Room Width (m)</label>
+                                                <input type="number" id="e-room-w" value="4" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Trench Width B (m)</label>
+                                                <input type="number" id="e-trench-b" value="0.9" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Trench Depth D (m)</label>
+                                                <input type="number" id="e-trench-h" value="1.2" step="0.1" min="0.1">
+                                            </div>
+                                        </div>
+                                        <div id="est-cl-preview" style="font-size:0.75rem;color:#818cf8;background:rgba(99,102,241,0.08);border-radius:7px;padding:0.5rem 0.7rem;margin-top:0.4rem;">
+                                            Long Wall: <strong id="est-lcc-val">—</strong> m &nbsp;|&nbsp; Short Wall: <strong id="est-wcc-val">—</strong> m
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 2: Footings -->
+                                    <div class="est-glass-card level-footing">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Step 2 — Footings</span>
+                                        </div>
+                                        <div class="est-footing-list" id="e-footing-list"></div>
+                                        <button class="est-add-step-btn" id="e-add-footing">&#43; Add Footing Step</button>
+                                    </div>
+
+                                    <!-- Step 3: Superstructure -->
+                                    <div class="est-glass-card level-super">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Step 3 — Superstructure</span>
+                                        </div>
+                                        <div class="est-room-inputs">
+                                            <div class="est-field">
+                                                <label>Wall Thickness (m)</label>
+                                                <input type="number" id="e-wall-thick" value="0.3" step="0.05" min="0.05">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Wall Height (m)</label>
+                                                <input type="number" id="e-wall-h" value="3" step="0.1" min="0.5">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Drag-and-Drop Deductions -->
+                                    <div class="est-glass-card">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></div>
+                                            <span class="est-level-title">Deductions — Drag to Canvas</span>
+                                        </div>
+                                        <div class="est-deduction-library" id="e-ded-library">
+                                            <div class="est-ded-item" draggable="true" data-type="Door" data-len="0.9" data-ht="2.1">🚪<span>Door</span></div>
+                                            <div class="est-ded-item" draggable="true" data-type="Window" data-len="1.2" data-ht="1.2">🪟<span>Window</span></div>
+                                            <div class="est-ded-item" draggable="true" data-type="Ventilator" data-len="0.6" data-ht="0.45">🔲<span>Vent</span></div>
+                                        </div>
+                                        <div class="est-ded-list" id="e-ded-list">
+                                            <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:0.5rem;">Drag items above onto a wall</div>
+                                        </div>
+                                    </div>
+
+                                    <button class="est-calc-btn" id="e-calc-btn">⚡ Generate Measurement Sheet</button>
+                                </div>
+
+                                <!-- CENTER: SMART CANVAS -->
+                                <div class="est-canvas-wrap">
+                                    <div class="est-canvas-container" id="e-canvas-container">
+                                        <div class="est-canvas-header">
+                                            <div class="est-canvas-title">🏗️ Smart Canvas — Blueprint View</div>
+                                            <div style="display:flex;gap:0.6rem;align-items:center;">
+                                                <div class="est-canvas-legend">
+                                                    <div class="est-legend-item"><div class="est-legend-dot" style="background:#10b981;"></div>Long (Out-to-Out)</div>
+                                                    <div class="est-legend-item"><div class="est-legend-dot" style="background:#60a5fa;"></div>Short (In-to-In)</div>
+                                                </div>
+                                                <div class="est-highlight-toggle">
+                                                    <button class="est-hl-btn hl-long active" id="hl-long-btn">Long</button>
+                                                    <button class="est-hl-btn hl-short active" id="hl-short-btn">Short</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <canvas id="est-blueprint-canvas" height="370"></canvas>
+                                        <div class="est-canvas-drop-hint" id="e-drop-hint">
+                                            <span class="hint-icon">🏗️</span>
+                                            Enter room dimensions to see the live blueprint
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- RIGHT: RESULTS -->
+                                <div class="est-results-wrap">
+                                    <div class="est-kpi-row">
+                                        <div class="est-kpi excavation">
+                                            <div class="est-kpi-label">Excavation</div>
+                                            <div class="est-kpi-val" id="kpi-exc">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                        <div class="est-kpi footing">
+                                            <div class="est-kpi-label">Footing</div>
+                                            <div class="est-kpi-val" id="kpi-foot">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                        <div class="est-kpi super">
+                                            <div class="est-kpi-label">Brickwork</div>
+                                            <div class="est-kpi-val" id="kpi-super">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                    </div>
+                                    <div class="est-results-card">
+                                        <div class="est-results-card-header">📋 Measurement Sheet</div>
+                                        <div id="e-results-body">
+                                            <div class="est-empty-state">
+                                                <span class="empty-icon">📐</span>
+                                                <p>Click "Generate Measurement Sheet"<br>to see detailed quantities</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- ══ CENTRE LINE PANEL ══ -->
+                        <div id="est-panel-cl" style="display:none;">
+                            <div class="est-grid">
+
+                                <!-- Sidebar -->
+                                <div class="est-sidebar">
+                                    <div class="est-glass-card level-foundation">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Room Dimensions</span>
+                                        </div>
+                                        <div class="est-room-inputs">
+                                            <div class="est-field">
+                                                <label>Room Length (m)</label>
+                                                <input type="number" id="cl-room-l" value="5" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Room Width (m)</label>
+                                                <input type="number" id="cl-room-w" value="4" step="0.1" min="0.1">
+                                            </div>
+                                        </div>
+                                        <div class="est-cl-summary">
+                                            <div class="est-cl-kpi">
+                                                <div class="est-cl-kpi-label">Centre-Line Length (Lcc)</div>
+                                                <div class="est-cl-kpi-val" id="cl-lcc-display">—</div>
+                                            </div>
+                                            <div class="est-cl-kpi">
+                                                <div class="est-cl-kpi-label">Centre-Line Width (Wcc)</div>
+                                                <div class="est-cl-kpi-val" id="cl-wcc-display">—</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="est-glass-card level-footing">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Excavation &amp; Footing</span>
+                                        </div>
+                                        <div class="est-room-inputs">
+                                            <div class="est-field">
+                                                <label>Trench Width (m)</label>
+                                                <input type="number" id="cl-trench-b" value="0.9" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Trench Depth (m)</label>
+                                                <input type="number" id="cl-trench-h" value="1.2" step="0.1" min="0.1">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>T-Junctions</label>
+                                                <input type="number" id="cl-tjunc2" value="0" step="1" min="0">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Footing Width (m)</label>
+                                                <input type="number" id="cl-foot-b" value="0.6" step="0.05" min="0.05">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Footing Height (m)</label>
+                                                <input type="number" id="cl-foot-h" value="0.3" step="0.05" min="0.05">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="est-glass-card level-super">
+                                        <div class="est-level-badge">
+                                            <div class="est-level-dot"></div>
+                                            <span class="est-level-title">Superstructure</span>
+                                        </div>
+                                        <div class="est-room-inputs">
+                                            <div class="est-field">
+                                                <label>Wall Thickness (m)</label>
+                                                <input type="number" id="cl-wall-b" value="0.3" step="0.05" min="0.05">
+                                            </div>
+                                            <div class="est-field">
+                                                <label>Wall Height (m)</label>
+                                                <input type="number" id="cl-wall-h" value="3" step="0.1" min="0.5">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="est-calc-btn" id="cl-calc-btn">⚡ Generate Measurement Sheet</button>
+                                </div>
+
+                                <!-- Canvas -->
+                                <div class="est-canvas-wrap">
+                                    <div class="est-canvas-container" id="cl-canvas-container">
+                                        <div class="est-canvas-header">
+                                            <div class="est-canvas-title">🏗️ Centre Line Blueprint</div>
+                                            <div class="est-canvas-legend">
+                                                <div class="est-legend-item"><div class="est-legend-dot" style="background:#818cf8;"></div>Centre Line (Lcc / Wcc)</div>
+                                            </div>
+                                        </div>
+                                        <canvas id="cl-blueprint-canvas" height="370"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Results -->
+                                <div class="est-results-wrap">
+                                    <div class="est-kpi-row">
+                                        <div class="est-kpi excavation">
+                                            <div class="est-kpi-label">Excavation</div>
+                                            <div class="est-kpi-val" id="cl-kpi-exc">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                        <div class="est-kpi footing">
+                                            <div class="est-kpi-label">Footing</div>
+                                            <div class="est-kpi-val" id="cl-kpi-foot">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                        <div class="est-kpi super">
+                                            <div class="est-kpi-label">Brickwork</div>
+                                            <div class="est-kpi-val" id="cl-kpi-super">—</div>
+                                            <div class="est-kpi-unit">m³</div>
+                                        </div>
+                                    </div>
+                                    <div class="est-results-card">
+                                        <div class="est-results-card-header">📋 Centre Line Measurement Sheet</div>
+                                        <div id="cl-results-body">
+                                            <div class="est-empty-state">
+                                                <span class="empty-icon">📐</span>
+                                                <p>Click "Generate" to compute<br>Centre Line quantities</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div><!-- /tab-estimate-calculator -->
+
                 <!-- Add Load Modal (Slope Deflection) -->
                 <div id="sd-load-modal" class="modal-overlay" style="display:none; z-index: 2000;">
                     <div class="modal-box glass-panel" style="max-width: 400px;">
@@ -1306,6 +1592,7 @@
         <script src="/slope-app.js"></script>
         <script src="/mix-engine.js"></script>
         <script src="/mix-app.js"></script>
+        <script src="/estimate.js"></script>
         <script type="module" src="script.js"></script>
 </body>
 
