@@ -94,7 +94,7 @@
         const filesContainer = document.getElementById('aiFilesContainer');
 
         // Load config
-        const savedKey = localStorage.getItem('sitebuild_openrouter_key') || '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';
+        const savedKey = localStorage.getItem('sitebuild_openrouter_key');
         if (savedKey) {
             AI_STATE.config.openRouterKey = savedKey;
             document.getElementById('openRouterKeyInput').value = savedKey;
@@ -356,12 +356,27 @@ Options: overview, dashboard, workers, attendance, payments, analytics, mix-desi
                     'X-Title': 'SiteBuild AI SaaS'
                 },
                 body: JSON.stringify({
-                    model: "google/gemma-4-31b-it:free",
+                    model: "meta-llama/llama-3.1-8b-instruct:free",
                     messages: messages
                 })
             });
+            
+            if (!resp.ok) {
+                try {
+                    const errorData = await resp.json();
+                    console.error("OpenRouter Error:", errorData);
+                } catch(e) {
+                    console.error("OpenRouter Error (no JSON):", resp.status);
+                }
+                return null; // Trigger fallback
+            }
+
             const data = await resp.json();
-            if (data.error) return "API Error: " + data.error.message;
+            if (data.error) {
+                console.error("OpenRouter API Error:", data.error);
+                return null;
+            }
+            
             let result = data.choices[0].message.content;
             
             // Check structured tool call
