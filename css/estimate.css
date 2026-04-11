@@ -329,13 +329,49 @@
     flex: 1;
     position: relative;
     min-height: 420px;
-    overflow: hidden;
+    overflow: visible;
 }
+
+/* ── HIGHLIGHT WALL TOGGLE BUTTONS ── */
+.est-highlight-toggle {
+    display: flex;
+    gap: 4px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    position: relative;
+    z-index: 10;
+}
+.est-hl-btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-muted);
+    white-space: nowrap;
+    position: relative;
+    z-index: 11;
+}
+.est-hl-btn.hl-long.active  { background: rgba(16,185,129,0.25); color: #10b981; box-shadow: 0 2px 8px rgba(16,185,129,0.25); }
+.est-hl-btn.hl-short.active { background: rgba(96,165,250,0.25); color: #60a5fa; box-shadow: 0 2px 8px rgba(96,165,250,0.25); }
+.est-hl-btn:not(.active)    { opacity: 0.5; }
+.est-hl-btn:hover           { opacity: 1 !important; }
 .est-canvas-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
 }
 .est-canvas-title {
     font-weight: 700;
