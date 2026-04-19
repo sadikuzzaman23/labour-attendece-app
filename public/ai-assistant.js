@@ -24,7 +24,7 @@
         isSpeaking: false,
         knowledgeBase: [],
         config: { 
-            groqKey: '',
+            groqKey: window.JARVIS_CONFIG?.groqKey || '',
             models: {
                 llm: 'llama-3.3-70b-versatile',
                 stt: 'whisper-large-v3-turbo',

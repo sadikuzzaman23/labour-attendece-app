@@ -5,6 +5,11 @@ const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && i
 const SUPABASE_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbGd3ZHp2a3J3aHNhY2FwenVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDg0MzEsImV4cCI6MjA4ODE4NDQzMX0.JvqeAXAUsgIaGZenln-_L7y_9MXfVKcdeDddJeP7xiA';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ── AI CONFIG ──
+window.JARVIS_CONFIG = {
+    groqKey: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) || ''
+};
+
 // ── DOM REFS ──
 const dbStatus = document.getElementById('dbStatus');
 const themeToggle = document.getElementById('themeToggle');
