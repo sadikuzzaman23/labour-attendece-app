@@ -300,9 +300,24 @@
     }
 
     async function speakText(text) {
-        if (!AI_STATE.config.groqKey) return;
+        if (!AI_STATE.config.groqKey || !text) return;
         
-        // Update UI to suggest speaking state
+        // Character limit check: Groq Orpheus has a ~200 character limit per request
+        const chunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+        const processedChunks = [];
+        let currentChunk = "";
+        
+        chunks.forEach(sentence => {
+            if ((currentChunk + sentence).length < 180) {
+                currentChunk += sentence;
+            } else {
+                if (currentChunk) processedChunks.push(currentChunk);
+                currentChunk = sentence;
+            }
+        });
+        if (currentChunk) processedChunks.push(currentChunk);
+
+        // Update UI
         const statusDot = document.getElementById('aiStatusDot');
         const statusText = document.getElementById('aiStatusText');
         const wave = document.getElementById('aiSpeakingWave');
@@ -313,37 +328,52 @@
         AI_STATE.isSpeaking = true;
 
         try {
-            const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${AI_STATE.config.groqKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: AI_STATE.config.models.tts,
-                    input: text,
-                    voice: 'orpheus' // Specific to the Orpheus model
-                })
-            });
+            for (let chunk of processedChunks) {
+                const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AI_STATE.config.groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: AI_STATE.config.models.tts,
+                        input: chunk,
+                        voice: 'troy' // 'troy' is a valid voice ID for the Orpheus model
+                    })
+                });
 
-            if (!response.ok) throw new Error('Speech synthesis failed');
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error("Groq TTS Error:", error);
+                    continue; // Try next chunk or fallback
+                }
 
-            const audioBlob = await response.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                
+                await new Promise((resolve) => {
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    audio.onerror = (e) => {
+                        console.error("Audio playback error:", e);
+                        resolve();
+                    };
+                    audio.play();
+                });
+            }
             
-            audio.onended = () => {
-                if (statusDot) statusDot.classList.remove('speaking');
-                if (statusText) statusText.textContent = 'Engine Active';
-                if (wave) wave.classList.remove('active');
-                AI_STATE.isSpeaking = false;
-                URL.revokeObjectURL(audioUrl);
-            };
+            // Cleanup UI
+            if (statusDot) statusDot.classList.remove('speaking');
+            if (statusText) statusText.textContent = 'Engine Active';
+            if (wave) wave.classList.remove('active');
+            AI_STATE.isSpeaking = false;
 
-            await audio.play();
         } catch (err) {
-            console.error("Speech error:", err);
-            // Fallback to browser TTS if Groq fails
+            console.error("Speech sequence error:", err);
+            // Fallback
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.onend = () => {
                 if (statusDot) statusDot.classList.remove('speaking');
