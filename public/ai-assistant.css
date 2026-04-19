@@ -158,9 +158,48 @@ body[data-theme="light"] {
     animation: blink 2s infinite;
 }
 
+.ai-dot.speaking {
+    background: #00f2fe;
+    box-shadow: 0 0 10px #00f2fe;
+}
+
 @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
+}
+
+@keyframes pulseSpeaking {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.5); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+.ai-speaking-wave {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    height: 15px;
+    margin-left: 10px;
+}
+
+.ai-speaking-wave.active {
+    display: flex;
+}
+
+.ai-wave-bar {
+    width: 3px;
+    height: 100%;
+    background: #00f2fe;
+    border-radius: 2px;
+    animation: wave 0.6s infinite ease-in-out;
+}
+
+.ai-wave-bar:nth-child(2) { animation-delay: 0.2s; }
+.ai-wave-bar:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes wave {
+    0%, 100% { height: 5px; }
+    50% { height: 15px; }
 }
 
 /* Messages Area */
