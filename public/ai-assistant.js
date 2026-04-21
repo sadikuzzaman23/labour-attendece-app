@@ -347,7 +347,7 @@
                 if (!response.ok) {
                     const error = await response.json();
                     console.error("Groq TTS Error:", error);
-                    continue; // Try next chunk or fallback
+                    throw new Error("Groq TTS failed - falling back to native TTS");
                 }
 
                 const audioBlob = await response.blob();
