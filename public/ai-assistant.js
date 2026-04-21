@@ -24,7 +24,7 @@
         isSpeaking: false,
         knowledgeBase: [],
         config: { 
-            groqKey: window.JARVIS_CONFIG?.groqKey || '',
+            groqKey: '',
             models: {
                 llm: 'llama-3.3-70b-versatile',
                 stt: 'whisper-large-v3-turbo',
@@ -264,8 +264,9 @@
     }
 
     async function handleVoiceTranscription(audioBlob) {
-        if (!AI_STATE.config.groqKey) {
-            addMessage('bot', "❌ Groq API key is missing. Please add it in settings.");
+        const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
+        if (!key) {
+            addMessage('bot', "❌ Groq API key is missing. Please add it in settings or .env file.");
             return;
         }
 
@@ -279,7 +280,7 @@
             const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${AI_STATE.config.groqKey}`
+                    'Authorization': `Bearer ${key}`
                 },
                 body: formData
             });
@@ -300,7 +301,8 @@
     }
 
     async function speakText(text) {
-        if (!AI_STATE.config.groqKey || !text) return;
+        const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
+        if (!key || !text) return;
         
         // Character limit check: Groq Orpheus has a ~200 character limit per request
         const chunks = text.match(/[^.!?]+[.!?]+/g) || [text];
@@ -332,7 +334,7 @@
                 const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${AI_STATE.config.groqKey}`,
+                        'Authorization': `Bearer ${key}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -425,9 +427,9 @@
         showTyping();
 
         setTimeout(async () => {
-            let response = null;
-            if (AI_STATE.config.groqKey) {
-                response = await callLLM(text);
+            const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
+            if (key) {
+                response = await callLLM(text, key);
             }
             if (!response) {
                 // FALLBACK
@@ -441,8 +443,8 @@
         }, 500);
     }
 
-    async function callLLM(query) {
-        if (!AI_STATE.config.groqKey) return null;
+    async function callLLM(query, key) {
+        if (!key) return null;
         
         let kbContext = "";
         if (AI_STATE.knowledgeBase.length > 0) {
@@ -485,7 +487,7 @@ Options: dashboard, workers, attendance, payments, analytics, mix-design, estima
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${AI_STATE.config.groqKey}`
+                    'Authorization': `Bearer ${key}`
                 },
                 body: JSON.stringify({
                     model: AI_STATE.config.models.llm,
