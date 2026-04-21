@@ -30,13 +30,13 @@ async function getSiteSummary() {
 // --- Bot Commands ---
 
 bot.start((ctx) => {
-    ctx.replyWithMarkdownV2(
-        "👋 **Welcome to Jarvis AI Assistant!**\n\n" +
-        "I am your site management partner\\. You can use the following commands:\n" +
-        "📊 /status \\- View site health and summaries\n" +
-        "👷 /workers \\- List active workers\n" +
-        "📑 /attendance \\- Today's attendance report\n\n" +
-        "Or just talk to me about site issues\\!"
+    ctx.replyWithMarkdown(
+        "👋 *Welcome to Jarvis AI Assistant!*\n\n" +
+        "I am your site management partner. You can use the following commands:\n" +
+        "📊 /status - View site health and summaries\n" +
+        "👷 /workers - List active workers\n" +
+        "📑 /attendance - Today's attendance report\n\n" +
+        "Or just talk to me about site issues!"
     );
 });
 
