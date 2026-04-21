@@ -1,8 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 // ── SUPABASE CONF ──
-const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 'https://iplgwdzvkrwhsacapzuq.supabase.co';
-const SUPABASE_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbGd3ZHp2a3J3aHNhY2FwenVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDg0MzEsImV4cCI6MjA4ODE4NDQzMX0.JvqeAXAUsgIaGZenln-_L7y_9MXfVKcdeDddJeP7xiA';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── AI CONFIG ──
