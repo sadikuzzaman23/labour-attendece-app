@@ -7,7 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── AI CONFIG ──
 window.JARVIS_CONFIG = {
-    groqKey: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) || ''
+    groqKey: import.meta.env.VITE_GROQ_API_KEY || ''
 };
 
 // ── DOM REFS ──
