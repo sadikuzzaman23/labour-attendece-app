@@ -427,6 +427,7 @@
         showTyping();
 
         setTimeout(async () => {
+            let response = null;
             const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
             if (key) {
                 response = await callLLM(text, key);
