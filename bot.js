@@ -5,6 +5,20 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+// Environment Variables Validation
+console.log('🔍 Checking environment variables...');
+console.log('TELEGRAM_BOT_TOKEN:', process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing');
+console.log('VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? '✅ Set' : '❌ Missing');
+console.log('VITE_SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing');
+console.log('VITE_GROQ_API_KEY:', process.env.VITE_GROQ_API_KEY ? '✅ Set' : '❌ Missing');
+
+if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY || !process.env.VITE_GROQ_API_KEY) {
+    console.error('❌ Missing required environment variables. Please check your Render environment variables.');
+    process.exit(1);
+}
+
+console.log('✅ All environment variables are set. Starting bot...');
+
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
@@ -107,9 +121,28 @@ bot.on('text', async (ctx) => {
 });
 
 // --- Launch ---
-bot.launch();
-console.log('🚀 Jarvis Telegram Bot is running...');
+try {
+    bot.launch();
+    console.log('🚀 Jarvis Telegram Bot is running...');
+} catch (error) {
+    console.error('❌ Failed to launch bot:', error.message);
+    process.exit(1);
+}
+
+// Global error handler
+bot.catch((err, ctx) => {
+    console.error('Bot error:', err);
+    if (ctx) {
+        ctx.reply('🤖 Jarvis encountered an error. Please try again later.');
+    }
+});
 
 // Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+    console.log('🛑 Shutting down bot...');
+    bot.stop('SIGINT');
+});
+process.once('SIGTERM', () => {
+    console.log('🛑 Shutting down bot...');
+    bot.stop('SIGTERM');
+});
