@@ -1,6 +1,3 @@
-import { Telegraf } from 'telegraf';
-import { createClient } from '@supabase/supabase-js';
-import Groq from 'groq-sdk';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,11 +14,35 @@ if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.VITE_SUPABASE_URL || !proces
     process.exit(1);
 }
 
-console.log('✅ All environment variables are set. Starting bot...');
+console.log('✅ All environment variables are set. Testing connections...');
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
+// Test connections before starting bot
+try {
+    console.log('🔍 Testing Supabase connection...');
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+
+    const { data, error } = await supabase.from('sites').select('count').limit(1);
+    if (error) throw new Error(`Supabase error: ${error.message}`);
+    console.log('✅ Supabase connection successful');
+} catch (error) {
+    console.error('❌ Supabase connection failed:', error.message);
+    process.exit(1);
+}
+
+try {
+    console.log('🔍 Testing Groq connection...');
+    const Groq = (await import('groq-sdk')).default;
+    const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
+
+    await groq.models.list();
+    console.log('✅ Groq connection successful');
+} catch (error) {
+    console.error('❌ Groq connection failed:', error.message);
+    process.exit(1);
+}
+
+console.log('🎉 All connections successful! Starting bot...');
 
 const JARVIS_PERSONA = `You are Jarvis, a brilliant Civil Engineering Assistant. 
 You help manage construction sites, labour work, and technical calculations.
