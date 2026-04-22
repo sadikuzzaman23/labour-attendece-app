@@ -21,7 +21,7 @@ if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.VITE_SUPABASE_URL || !proces
 console.log('✅ All environment variables are set. Testing connections...');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 7860;
 
 app.get('/', (req, res) => {
     res.send('Jarvis Telegram Bot is running.');
