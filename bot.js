@@ -1,3 +1,7 @@
+import express from 'express';
+import { Telegraf } from 'telegraf';
+import { createClient } from '@supabase/supabase-js';
+import Groq from 'groq-sdk';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,11 +14,26 @@ console.log('VITE_SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? '✅
 console.log('VITE_GROQ_API_KEY:', process.env.VITE_GROQ_API_KEY ? '✅ Set' : '❌ Missing');
 
 if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY || !process.env.VITE_GROQ_API_KEY) {
-    console.error('❌ Missing required environment variables. Please check your Render environment variables.');
+    console.error('❌ Missing required environment variables. Please check your environment variables.');
     process.exit(1);
 }
 
 console.log('✅ All environment variables are set. Testing connections...');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('Jarvis Telegram Bot is running.');
+});
+
+app.listen(port, () => {
+    console.log(`🌐 HTTP server listening on port ${port}`);
+});
+
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
 
 // Test connections before starting bot
 try {
