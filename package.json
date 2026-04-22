@@ -5,6 +5,7 @@
   "main": "script.js",
   "type": "module",
   "scripts": {
+    "start": "node bot.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -13,6 +14,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "telegraf": "^4.15.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "groq-sdk": "^0.5.0",
+    "dotenv": "^16.3.1"
+  },
   "devDependencies": {
     "vite": "^5.2.0"
   }
