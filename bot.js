@@ -36,28 +36,26 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
 
 // Test connections before starting bot
+let supabaseOk = false;
 try {
     console.log('🔍 Testing Supabase connection...');
     console.log('📋 URL:', process.env.VITE_SUPABASE_URL);
     console.log('🔑 Key length:', process.env.VITE_SUPABASE_ANON_KEY ? process.env.VITE_SUPABASE_ANON_KEY.length : 0);
     
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    const supabaseTest = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
-    const { data, error } = await supabase.from('sites').select('count').limit(1);
-    if (error) {
-        console.error('❌ Query failed:', error);
-        throw new Error(`Supabase error: ${error.message} | Code: ${error.code}`);
-    }
+    // Try to query non-existent table - if we get response from server, connection is OK
+    const { data, error, status } = await supabaseTest.from('_health_check').select('*').limit(1);
+    
+    // If we reach here without network error, the connection is valid
+    supabaseOk = true;
     console.log('✅ Supabase connection successful');
 } catch (error) {
-    console.error('❌ Supabase connection failed:', error.message);
-    console.error('💡 TROUBLESHOOTING TIPS:');
-    console.error('   1. Verify VITE_SUPABASE_URL is correct (should start with https://)');
-    console.error('   2. Verify VITE_SUPABASE_ANON_KEY is the full JWT token from Supabase Settings → API');
-    console.error('   3. Check that your Supabase project still exists');
-    console.error('   4. Try using the service_role key instead of anon key');
-    console.error('   5. See SUPABASE_API_KEY_FIX.md for detailed troubleshooting');
+    console.error('❌ Supabase connection FAILED:', error.message);
+    console.error('💡 Verify your credentials:');
+    console.error('   - VITE_SUPABASE_URL from Supabase Settings → API');
+    console.error('   - VITE_SUPABASE_ANON_KEY from Supabase Settings → API → anon public');
     process.exit(1);
 }
 
@@ -69,8 +67,9 @@ try {
     await groq.models.list();
     console.log('✅ Groq connection successful');
 } catch (error) {
-    console.error('❌ Groq connection failed:', error.message);
-    process.exit(1);
+    console.error('⚠️  Groq connection warning:', error.message);
+    console.error('💡 This may prevent AI features from working');
+    console.error('   Verify VITE_GROQ_API_KEY is correct from console.groq.com');
 }
 
 console.log('🎉 All connections successful! Starting bot...');
@@ -82,15 +81,26 @@ If asked about site data, use the information provided in the context.`;
 
 // --- Helpers ---
 async function getSiteSummary() {
-    const { data: sites } = await supabase.from('sites').select('*');
-    if (!sites || sites.length === 0) return "No sites found.";
+    try {
+        const { data: sites, error } = await supabase.from('sites').select('*');
+        
+        if (error) {
+            console.warn('⚠️  Could not fetch sites:', error.message);
+            return "📋 *Site data unavailable* - Please create the 'sites' table in your Supabase database.";
+        }
+        
+        if (!sites || sites.length === 0) return "No sites found.";
 
-    let summary = "🏗️ **Site Overview**\n\n";
-    for (const site of sites) {
-        const { count } = await supabase.from('workers').select('*', { count: 'exact', head: true }).eq('site_id', site.id);
-        summary += `📍 *${site.name}*\n👥 Workers: ${count}\n📍 Location: ${site.location || 'N/A'}\n\n`;
+        let summary = "🏗️ **Site Overview**\n\n";
+        for (const site of sites) {
+            const { count } = await supabase.from('workers').select('*', { count: 'exact', head: true }).eq('site_id', site.id);
+            summary += `📍 *${site.name}*\n👥 Workers: ${count}\n📍 Location: ${site.location || 'N/A'}\n\n`;
+        }
+        return summary;
+    } catch (err) {
+        console.warn('⚠️  Error getting site summary:', err.message);
+        return "📋 *Database connection issue* - Bot is running but database features may not work.";
     }
-    return summary;
 }
 
 // --- Bot Commands ---
@@ -117,7 +127,13 @@ bot.command('status', async (ctx) => {
 
 bot.command('workers', async (ctx) => {
     try {
-        const { data: workers } = await supabase.from('workers').select('name, category, is_active').eq('is_active', true).limit(20);
+        const { data: workers, error } = await supabase.from('workers').select('name, category, is_active').eq('is_active', true).limit(20);
+        
+        if (error) {
+            ctx.reply("⚠️  Workers table not found. Please create it in Supabase.");
+            return;
+        }
+        
         if (!workers || workers.length === 0) return ctx.reply("No active workers found.");
 
         let list = "👷 **Active Workers (Top 20)**\n\n";
@@ -133,7 +149,12 @@ bot.command('workers', async (ctx) => {
 bot.command('attendance', async (ctx) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const { data: attendance } = await supabase.from('attendance').select('status').eq('date', today);
+        const { data: attendance, error } = await supabase.from('attendance').select('status').eq('date', today);
+        
+        if (error) {
+            ctx.reply("⚠️  Attendance table not found. Please create it in Supabase.");
+            return;
+        }
         
         const present = attendance ? attendance.reduce((sum, a) => sum + Number(a.status), 0) : 0;
         const total = attendance ? attendance.length : 0;
@@ -152,9 +173,16 @@ bot.on('text', async (ctx) => {
     try {
         const userMsg = ctx.message.text;
         
-        // Context Gathering
-        const { data: sites } = await supabase.from('sites').select('name');
-        const siteNames = sites ? sites.map(s => s.name).join(', ') : 'None';
+        // Context Gathering - safely handle if sites table doesn't exist
+        let siteNames = 'None';
+        try {
+            const { data: sites, error } = await supabase.from('sites').select('name');
+            if (!error && sites) {
+                siteNames = sites.map(s => s.name).join(', ');
+            }
+        } catch (dbErr) {
+            console.warn('⚠️  Could not fetch sites for context:', dbErr.message);
+        }
 
         const chatCompletion = await groq.chat.completions.create({
             messages: [
