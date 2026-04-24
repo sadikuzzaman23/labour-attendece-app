@@ -38,14 +38,26 @@ const groq = new Groq({ apiKey: process.env.VITE_GROQ_API_KEY });
 // Test connections before starting bot
 try {
     console.log('🔍 Testing Supabase connection...');
+    console.log('📋 URL:', process.env.VITE_SUPABASE_URL);
+    console.log('🔑 Key length:', process.env.VITE_SUPABASE_ANON_KEY ? process.env.VITE_SUPABASE_ANON_KEY.length : 0);
+    
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
     const { data, error } = await supabase.from('sites').select('count').limit(1);
-    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (error) {
+        console.error('❌ Query failed:', error);
+        throw new Error(`Supabase error: ${error.message} | Code: ${error.code}`);
+    }
     console.log('✅ Supabase connection successful');
 } catch (error) {
     console.error('❌ Supabase connection failed:', error.message);
+    console.error('💡 TROUBLESHOOTING TIPS:');
+    console.error('   1. Verify VITE_SUPABASE_URL is correct (should start with https://)');
+    console.error('   2. Verify VITE_SUPABASE_ANON_KEY is the full JWT token from Supabase Settings → API');
+    console.error('   3. Check that your Supabase project still exists');
+    console.error('   4. Try using the service_role key instead of anon key');
+    console.error('   5. See SUPABASE_API_KEY_FIX.md for detailed troubleshooting');
     process.exit(1);
 }
 
