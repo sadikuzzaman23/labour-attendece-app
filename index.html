@@ -69,6 +69,9 @@
                     <button class="tab-btn" data-tab="estimate-calculator" id="navEstimateCalculator">
                         <span class="nav-icon">🧮</span> Estimate Calculator
                     </button>
+                    <button class="tab-btn" data-tab="earthwork-estimator" id="navEarthworkEstimator">
+                        <span class="nav-icon">🌍</span> Earthwork Estimator
+                    </button>
                 </nav>
             </aside>
 
@@ -1495,6 +1498,13 @@
 
                     </div>
                 </div><!-- /tab-estimate-calculator -->
+
+                <!-- ══════════════════════════════════════════
+                     TAB: EARTHWORK ESTIMATOR
+                ══════════════════════════════════════════ -->
+                <div id="tab-earthwork-estimator" class="tab-content" style="height: calc(100vh - 120px); padding: 0; margin-top: -1rem;">
+                    <iframe src="/EarthworkCalculator.html" style="width: 100%; height: 100%; border: none; border-radius: 12px;"></iframe>
+                </div>
 
                 <!-- Add Load Modal (Slope Deflection) -->
                 <div id="sd-load-modal" class="modal-overlay" style="display:none; z-index: 2000;">

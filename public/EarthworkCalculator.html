@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earthwork Calculator | Exam Mode</title>
+    <meta name="description" content="Professional Civil Engineering Earthwork Calculator for students and site engineers. Step-by-step solutions for Mid-Section, Mean Section, and Trapezoidal methods.">
+    <!-- SheetJS CDN for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --accent: #f1f5f9;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.25rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input, select {
+            padding: 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        #output {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-section {
+            background: #fff;
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 1rem;
+            color: #334155;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Inter', sans-serif;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--accent);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .comparison-card {
+            background: var(--accent);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .difference-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Earthwork Calculator</h1>
+            <p class="subtitle">Exam Mode | Precision & Step-by-Step Solutions</p>
+        </header>
+
+        <div class="card">
+            <div class="form-group">
+                <label for="methodSelect">Calculation Method</label>
+                <select id="methodSelect" onchange="toggleInputs()">
+                    <option value="mid">Mid-Section Method</option>
+                    <option value="mean">Mean Section Method</option>
+                    <option value="trapezoidal">Trapezoidal Method (Prismoidal)</option>
+                </select>
+            </div>
+
+            <div class="input-grid">
+                <!-- Common Fields -->
+                <div class="form-group">
+                    <label for="widthB">Width of Road (B)</label>
+                    <input type="number" id="widthB" placeholder="e.g. 10" step="any">
+                </div>
+                <div class="form-group">
+                    <label for="slopeS">Side Slope (S:1)</label>
+                    <input type="number" id="slopeS" placeholder="e.g. 2" step="any">
+                </div>
+
+                <!-- Mid/Mean Fields -->
+                <div class="form-group section-standard">
+                    <label for="lengthL">Length of Section (L)</label>
+                    <input type="number" id="lengthL" placeholder="e.g. 30" step="any">
+                </div>
+                <div class="form-group section-standard">
+                    <label for="heightD1">Height at Start (d1)</label>
+                    <input type="number" id="heightD1" placeholder="e.g. 1.2" step="any">
+                </div>
+                <div class="form-group section-standard">
+                    <label for="heightD2">Height at End (d2)</label>
+                    <input type="number" id="heightD2" placeholder="e.g. 1.5" step="any">
+                </div>
+
+                <!-- Trapezoidal Fields -->
+                <div class="form-group section-trapezoidal hidden">
+                    <label for="interval">Interval Distance (m)</label>
+                    <input type="number" id="interval" placeholder="e.g. 30" step="any">
+                </div>
+                <div class="form-group section-trapezoidal hidden" style="grid-column: span 2;">
+                    <label for="heightsList">Heights (Comma separated: d1, d2, d3...)</label>
+                    <input type="text" id="heightsList" placeholder="e.g. 1.2, 1.4, 1.5, 1.3">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="calculate()">Calculate Solution</button>
+                <button class="btn-outline" id="compareBtn" onclick="compareMethods()">Compare All Methods</button>
+                <button class="btn-secondary" onclick="exportExcel()">Export to Excel</button>
+            </div>
+        </div>
+
+        <div id="output" class="card">
+            <h2 id="resultTitle" style="font-family: Outfit; margin-bottom: 1rem;">Result Analysis</h2>
+            <div id="resultContent" class="result-section"></div>
+        </div>
+
+        <footer>
+            &copy; 2024 Earthwork Pro | Civil Engineering Academic Tool
+        </footer>
+    </div>
+
+    <script>
+        // Utility functions
+        const getVal = (id) => parseFloat(document.getElementById(id).value);
+        const getStr = (id) => document.getElementById(id).value;
+        const format = (num) => Number(num.toFixed(3));
+
+        function area(B, S, d) {
+            return B * d + S * (d * d);
+        }
+
+        function toggleInputs() {
+            const method = document.getElementById('methodSelect').value;
+            const standardFields = document.querySelectorAll('.section-standard');
+            const trapezoidalFields = document.querySelectorAll('.section-trapezoidal');
+            const compareBtn = document.getElementById('compareBtn');
+
+            if (method === 'trapezoidal') {
+                standardFields.forEach(f => f.classList.add('hidden'));
+                trapezoidalFields.forEach(f => f.classList.remove('hidden'));
+                compareBtn.classList.add('hidden');
+            } else {
+                standardFields.forEach(f => f.classList.remove('hidden'));
+                trapezoidalFields.forEach(f => f.classList.add('hidden'));
+                compareBtn.classList.remove('hidden');
+            }
+            document.getElementById('output').style.display = 'none';
+        }
+
+        function validateCommon(B, S) {
+            if (isNaN(B) || isNaN(S)) {
+                alert("Please enter valid Width and Slope values.");
+                return false;
+            }
+            return true;
+        }
+
+        function calculate() {
+            const method = document.getElementById('methodSelect').value;
+            const B = getVal('widthB');
+            const S = getVal('slopeS');
+            
+            if (!validateCommon(B, S)) return;
+
+            const outputDiv = document.getElementById('output');
+            const resultContent = document.getElementById('resultContent');
+            outputDiv.style.display = 'block';
+
+            if (method === 'mid') {
+                resultContent.innerHTML = midSection(B, S, getVal('lengthL'), getVal('heightD1'), getVal('heightD2'));
+            } else if (method === 'mean') {
+                resultContent.innerHTML = meanSection(B, S, getVal('lengthL'), getVal('heightD1'), getVal('heightD2'));
+            } else if (method === 'trapezoidal') {
+                resultContent.innerHTML = trapezoidal(B, S, getVal('interval'), getStr('heightsList'));
+            }
+            
+            window.scrollTo({ top: outputDiv.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function midSection(B, S, L, d1, d2) {
+            if (isNaN(L) || isNaN(d1) || isNaN(d2)) return "Error: Invalid inputs for d1, d2, or L.";
+            
+            const dm = (d1 + d2) / 2;
+            const Am = area(B, S, dm);
+            const V = L * Am;
+
+            return `
+<strong>MID-SECTION METHOD SOLUTION</strong>
+---------------------------------------
+1. Mean Depth (d):
+   d = (d1 + d2) / 2
+   d = (${d1} + ${d2}) / 2 = ${format(dm)} m
+
+2. Cross-sectional Area (A) at Mean Depth:
+   A = B×d + S×d²
+   A = ${B}×${format(dm)} + ${S}×(${format(dm)})²
+   A = ${format(B * dm)} + ${format(S * dm * dm)}
+   A = ${format(Am)} m²
+
+3. Total Volume (V):
+   V = L × A
+   V = ${L} × ${format(Am)}
+   V = <strong>${format(V)} m³</strong>
+            `;
+        }
+
+        function meanSection(B, S, L, d1, d2) {
+            if (isNaN(L) || isNaN(d1) || isNaN(d2)) return "Error: Invalid inputs for d1, d2, or L.";
+
+            const A1 = area(B, S, d1);
+            const A2 = area(B, S, d2);
+            const Am = (A1 + A2) / 2;
+            const V = L * Am;
+
+            return `
+<strong>MEAN SECTION METHOD SOLUTION</strong>
+---------------------------------------
+1. Area at Start (A1):
+   A1 = B×d1 + S×d1²
+   A1 = ${B}×${d1} + ${S}×(${d1})² = ${format(A1)} m²
+
+2. Area at End (A2):
+   A2 = B×d2 + S×d2²
+   A2 = ${B}×${d2} + ${S}×(${d2})² = ${format(A2)} m²
+
+3. Mean Area (Am):
+   Am = (A1 + A2) / 2
+   Am = (${format(A1)} + ${format(A2)}) / 2 = ${format(Am)} m²
+
+4. Total Volume (V):
+   V = L × Am
+   V = ${L} × ${format(Am)}
+   V = <strong>${format(V)} m³</strong>
+            `;
+        }
+
+        function trapezoidal(B, S, interval, heightsStr) {
+            const hArr = heightsStr.split(',').map(h => parseFloat(h.trim())).filter(h => !isNaN(h));
+            if (hArr.length < 2 || isNaN(interval)) return "Error: Please provide at least 2 heights and a valid interval.";
+
+            let tableHtml = `<div class="table-container"><table><thead><tr><th>Sec</th><th>Height (d)</th><th>Area (A = Bd + Sd²)</th></tr></thead><tbody>`;
+            const areas = hArr.map((d, i) => {
+                const A = area(B, S, d);
+                tableHtml += `<tr><td>${i+1}</td><td>${d}</td><td>${format(A)}</td></tr>`;
+                return A;
+            });
+            tableHtml += `</tbody></table></div>`;
+
+            const n = areas.length;
+            const sumInterior = areas.slice(1, -1).reduce((acc, curr) => acc + curr, 0);
+            const V = (interval / 2) * (areas[0] + areas[n-1] + 2 * sumInterior);
+
+            let formula = `V = (D / 2) * [A1 + An + 2(A2 + A3 + ... + An-1)]\n`;
+            formula += `V = (${interval} / 2) * [${format(areas[0])} + ${format(areas[n-1])} + 2(${format(sumInterior)})]\n`;
+            formula += `V = <strong>${format(V)} m³</strong>`;
+
+            return `
+<strong>TRAPEZOIDAL METHOD (PRISMOIDAL RULE)</strong>
+---------------------------------------
+Step 1: Calculate Areas for each section
+${tableHtml}
+Step 2: Apply Trapezoidal Formula
+${formula}
+            `;
+        }
+
+        function compareMethods() {
+            const B = getVal('widthB');
+            const S = getVal('slopeS');
+            const L = getVal('lengthL');
+            const d1 = getVal('heightD1');
+            const d2 = getVal('heightD2');
+
+            if (!validateCommon(B, S) || isNaN(L) || isNaN(d1) || isNaN(d2)) {
+                alert("Please fill all standard inputs for comparison.");
+                return;
+            }
+
+            const outputDiv = document.getElementById('output');
+            const resultContent = document.getElementById('resultContent');
+            outputDiv.style.display = 'block';
+
+            // Calculate values
+            const dm = (d1 + d2) / 2;
+            const V_mid = L * area(B, S, dm);
+            
+            const A1 = area(B, S, d1);
+            const A2 = area(B, S, d2);
+            const V_mean = L * (A1 + A2) / 2;
+
+            const diff = Math.abs(V_mid - V_mean);
+
+            resultContent.innerHTML = `
+<strong>COMPARISON ANALYSIS</strong>
+---------------------------------------
+<div class="compare-grid">
+    <div class="comparison-card">
+        <strong>Mid-Section Method:</strong><br>
+        Volume: ${format(V_mid)} m³
+    </div>
+    <div class="comparison-card">
+        <strong>Mean Section Method:</strong><br>
+        Volume: ${format(V_mean)} m³
+    </div>
+</div>
+<div class="difference-badge">
+    Difference in Volume: ${format(diff)} m³
+</div>
+
+<em>Note: Mean Section Method generally gives a slightly higher volume than Mid-Section Method for varying depths.</em>
+            `;
+            window.scrollTo({ top: outputDiv.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function exportExcel() {
+            const method = document.getElementById('methodSelect').value;
+            const B = getVal('widthB');
+            const S = getVal('slopeS');
+            let data = [];
+
+            if (method === 'trapezoidal') {
+                const interval = getVal('interval');
+                const hArr = getStr('heightsList').split(',').map(h => parseFloat(h.trim())).filter(h => !isNaN(h));
+                
+                data.push(["Trapezoidal Method Earthwork Report"]);
+                data.push([]);
+                data.push(["Width (B)", B, "Side Slope (S)", S, "Interval", interval]);
+                data.push([]);
+                data.push(["Section", "Height (d)", "Area (A)"]);
+                
+                let sumInterior = 0;
+                hArr.forEach((d, i) => {
+                    const A = area(B, S, d);
+                    data.push([i + 1, d, format(A)]);
+                    if (i > 0 && i < hArr.length - 1) sumInterior += A;
+                });
+                
+                const areas = hArr.map(d => area(B, S, d));
+                const V = (interval / 2) * (areas[0] + areas[areas.length-1] + 2 * sumInterior);
+                
+                data.push([]);
+                data.push(["Total Volume", "", format(V) + " m³"]);
+            } else {
+                const L = getVal('lengthL');
+                const d1 = getVal('heightD1');
+                const d2 = getVal('heightD2');
+                const methodName = method === 'mid' ? "Mid-Section" : "Mean Section";
+                
+                data.push([methodName + " Method Earthwork Report"]);
+                data.push([]);
+                data.push(["Parameter", "Value"]);
+                data.push(["Width (B)", B]);
+                data.push(["Side Slope (S)", S]);
+                data.push(["Length (L)", L]);
+                data.push(["Height Start (d1)", d1]);
+                data.push(["Height End (d2)", d2]);
+                
+                let volume = 0;
+                if (method === 'mid') {
+                    const dm = (d1 + d2) / 2;
+                    volume = L * area(B, S, dm);
+                } else {
+                    const A1 = area(B, S, d1);
+                    const A2 = area(B, S, d2);
+                    volume = L * (A1 + A2) / 2;
+                }
+                
+                data.push([]);
+                data.push(["Calculated Volume", format(volume) + " m³"]);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Earthwork Report");
+            XLSX.writeFile(wb, "Earthwork_Report.xlsx");
+        }
+
+        // Initialize state
+        toggleInputs();
+    </script>
+</body>
+</html>

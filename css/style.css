@@ -152,6 +152,29 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Custom Scrollbar for side-nav */
+.side-nav::-webkit-scrollbar {
+    width: 6px;
+}
+.side-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+.side-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+.side-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+body[data-theme="light"] .side-nav::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+}
+body[data-theme="light"] .side-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .nav-icon {
