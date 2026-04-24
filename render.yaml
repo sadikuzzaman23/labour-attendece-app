@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: labour-bot
+    env: docker
+    region: singapore  # Choose a region close to you, e.g., oregon, frankfurt, singapore
+    plan: free  # Or starter, etc.
+    envVars:
+      - key: VITE_SUPABASE_URL
+        value: ${VITE_SUPABASE_URL}  # Set this in Render dashboard or use fromSecret if using secrets
+      - key: VITE_SUPABASE_ANON_KEY
+        value: ${VITE_SUPABASE_ANON_KEY}
+      - key: VITE_GROQ_API_KEY
+        value: ${VITE_GROQ_API_KEY}
+      - key: TELEGRAM_BOT_TOKEN
+        value: ${TELEGRAM_BOT_TOKEN}
