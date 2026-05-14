@@ -88,48 +88,52 @@ const StructuralCore = {
 
         if (!isTwoWay) {
             // One-Way Slab (Spanning along Lx)
-            // Assuming simply supported for basic tutorial logic: wl^2 / 8
             Mu_x = (factoredLoad_kNm2 * Math.pow(Lx, 2)) / 8;
-            Mu_y = 0; // Distribution steel only
+            Mu_y = 0; 
         } else {
-            // Two-Way Slab (Simplified Marcus/IS456 Annex D coefficients proxy)
-            // For a highly accurate proxy, we use Grashoff-Rankine or simply assign alpha_x, alpha_y
-            // alpha_x approx = ratio^4 / (1 + ratio^4), alpha_y = 1 / (1 + ratio^4)
+            // Two-Way Slab (Simplified Annex D / Grashoff Proxy)
             const r4 = Math.pow(ratio, 4);
             const alpha_x = r4 / (1 + r4);
             const alpha_y = 1 / (1 + r4);
             
-            // Moment = alpha * w * Lx^2 / 8 (approx scaling for simple supported)
             Mu_x = alpha_x * (factoredLoad_kNm2 * Math.pow(Lx, 2)) / 8;
             Mu_y = alpha_y * (factoredLoad_kNm2 * Math.pow(Lx, 2)) / 8;
         }
 
-        // Check depth adequacy (using Mu_x as max)
-        let Xu_max_by_d = 0.48; // Fe 415
+        // 1. Check depth adequacy for moment
+        let Xu_max_by_d = 0.48; 
         if (fy === 500) Xu_max_by_d = 0.46;
-        const Mulim = 0.36 * Xu_max_by_d * (1 - 0.42 * Xu_max_by_d) * fck * 1000 * Math.pow(d, 2) / 1000000;
+        const Mulim = 0.138 * fck * 1000 * Math.pow(d, 2) / 1000000; // For Fe415
 
-        let safeDepth = Mu_x <= Mulim;
+        // 2. Deflection Check Proxy (IS 456 cl 23.2.1)
+        // Basic L/d = 20 for simply supported. Modify by modification factor (approx 1.2-1.5)
+        const L_d_actual = (Lx * 1000) / d;
+        const L_d_limit = 20 * 1.3; // Simplified SS slab limit
+        const deflectionSafe = L_d_actual <= L_d_limit;
 
-        // Ast calculation (per meter width, b = 1000mm)
+        // Ast calculation (Main)
         const insideSqrt = 1 - (4.6 * Mu_x * 1000000) / (fck * 1000 * Math.pow(d, 2));
         let Ast_x = 0;
         if (insideSqrt > 0) {
             Ast_x = (0.5 * fck / fy) * (1 - Math.sqrt(insideSqrt)) * 1000 * d;
         }
 
-        // Min Steel for slabs: 0.12% for HSD (Fe415/500), 0.15% for Mild Steel (Fe250)
+        // Min Steel (Distribution): 0.12% for HYSD, 0.15% for Mild
         const min_pt = (fy >= 415) ? 0.0012 : 0.0015;
         const Ast_min = min_pt * 1000 * D;
-
         Ast_x = Math.max(Ast_x, Ast_min);
 
-        // Spacing for 10mm bars
-        const area_10mm = Math.PI / 4 * 100;
+        // Spacing for 10mm Main bars
+        const area_10mm = (Math.PI / 4) * 100;
         let spacing_x = (area_10mm / Ast_x) * 1000;
-        spacing_x = Math.min(spacing_x, 3 * d, 300); // IS 456 max spacing limits
+        spacing_x = Math.min(spacing_x, 3 * d, 300);
 
-        return {
+        // Spacing for 8mm Dist bars
+        const area_8mm = (Math.PI / 4) * 64;
+        let spacing_dist = (area_8mm / Ast_min) * 1000;
+        spacing_dist = Math.min(spacing_dist, 5 * d, 450);
+
+        const rawDesign = {
             component: "Slab",
             type: isTwoWay ? "Two-Way Slab" : "One-Way Slab",
             ratio: ratio.toFixed(2),
@@ -137,12 +141,14 @@ const StructuralCore = {
             Mu_y_kNm: Mu_y.toFixed(2),
             Ast_x_req: Ast_x.toFixed(2),
             Ast_min: Ast_min.toFixed(2),
-            safeDepth,
+            safeDepth: (Mu_x <= Mulim) && deflectionSafe,
+            deflectionSafe,
             reinforcement_main: `10mm bars @ ${Math.floor(spacing_x / 10) * 10}mm c/c`,
-            loadPathVisualData: {
-                Lx, Ly, isTwoWay
-            }
+            reinforcement_dist: `8mm bars @ ${Math.floor(spacing_dist / 10) * 10}mm c/c`,
+            loadPathVisualData: { Lx, Ly, isTwoWay }
         };
+
+        return this.validateDesign(rawDesign);
     },
 
     designBeam(b, D, span, w_factored, fck, fy, cover = 25) {
@@ -313,6 +319,14 @@ const StructuralCore = {
                 violations.push(`Steel % (${pt.toFixed(2)}%) out of bounds 0.8% - 6.0%`);
             }
         }
+        else if (design.component === "Slab") {
+            if (!design.deflectionSafe) {
+                violations.push("L/d ratio exceeds IS 456 limits. Deflection might be excessive.");
+            }
+            if (design.Mu_x_kNm > 50) { // Arbitrary limit for a 150mm slab to flag extreme loads
+                violations.push("Moment too high for standard slab thickness.");
+            }
+        }
 
         design.validation = {
             passed: violations.length === 0,
@@ -344,8 +358,100 @@ const StructuralCore = {
         }
         if (!bestCombo) bestCombo = { count: 4, dia: 20, areaProvided: ((Math.PI / 4) * 400 * 4).toFixed(1), note: "High steel requirement" };
         return bestCombo;
-    }
+    },
+
+    // ── 7. STAIRCASE DESIGN (Waist Slab Type, IS 456) ──
+    designStaircase(floorHeight = 3.0, width = 1.2, fck = 20, fy = 415) {
+        const riseHeight = 150; // mm (IS recommended 150-180)
+        const tread = 270;      // mm (IS recommended 250-300)
+        const risers = Math.ceil((floorHeight * 1000) / riseHeight);
+        const goingLength = (risers - 1) * tread / 1000; // m
+        const inclinedSpan = Math.sqrt(Math.pow(floorHeight, 2) + Math.pow(goingLength, 2));
+        const effectiveSpan = inclinedSpan + 0.5; // add landing
+
+        // Waist slab thickness (span/20 for simply supported)
+        const waistSlab = Math.ceil((effectiveSpan * 1000 / 20) / 10) * 10;
+        const d = waistSlab - 25 - 5; // cover 25mm, bar dia/2 = 5
+
+        // Loads
+        const selfWt = (waistSlab / 1000) * 25 / Math.cos(Math.atan(floorHeight / goingLength)); // inclined
+        const stepWt = 0.5 * (riseHeight / 1000) * 25; // avg step weight
+        const finishLoad = 1.0;
+        const liveLoad = 4.0; // IS 875 for stairs
+        const totalService = selfWt + stepWt + finishLoad + liveLoad;
+        const wu = totalService * 1.5;
+
+        // Moment
+        const Mu = (wu * Math.pow(effectiveSpan, 2)) / 8;
+
+        // Ast per meter width
+        const insideSqrt = 1 - (4.6 * Mu * 1e6) / (fck * 1000 * Math.pow(d, 2));
+        let Ast = 0;
+        if (insideSqrt > 0) {
+            Ast = (0.5 * fck / fy) * (1 - Math.sqrt(insideSqrt)) * 1000 * d;
+        }
+        const Ast_min = 0.0012 * 1000 * waistSlab;
+        Ast = Math.max(Ast, Ast_min);
+
+        const area_12mm = (Math.PI / 4) * 144;
+        let spacing_main = (area_12mm / Ast) * 1000;
+        spacing_main = Math.min(spacing_main, 3 * d, 300);
+
+        const area_8mm = (Math.PI / 4) * 64;
+        let spacing_dist = (area_8mm / Ast_min) * 1000;
+        spacing_dist = Math.min(spacing_dist, 5 * d, 450);
+
+        return {
+            component: "Staircase",
+            risers,
+            riseHeight,
+            tread,
+            goingLength: goingLength.toFixed(2),
+            inclinedSpan: inclinedSpan.toFixed(2),
+            effectiveSpan: effectiveSpan.toFixed(2),
+            waistSlab,
+            d,
+            totalServiceLoad: totalService.toFixed(2),
+            factoredLoad: wu.toFixed(2),
+            Mu_kNm: Mu.toFixed(2),
+            Ast_req: Ast.toFixed(2),
+            reinforcement_main: `12mm @ ${Math.floor(spacing_main / 10) * 10}mm c/c`,
+            reinforcement_dist: `8mm @ ${Math.floor(spacing_dist / 10) * 10}mm c/c`,
+        };
+    },
+
+    // ── 8. SEISMIC BASE SHEAR (IS 1893:2016 Simplified) ──
+    seismicBaseShear(zone = 3, importanceFactor = 1.0, soilType = 'medium', buildingWeight_kN = 5000) {
+        const Z_map = { 2: 0.10, 3: 0.16, 4: 0.24, 5: 0.36 };
+        const Z = Z_map[zone] || 0.16;
+        const I = importanceFactor;
+        const R = 5.0; // SMRF assumed
+
+        // Approximate Sa/g based on soil type (short period plateau)
+        let Sa_by_g = 2.5; // Default for medium soil, T < 0.55s
+        if (soilType === 'hard' || soilType === 'rock') Sa_by_g = 2.5;
+        else if (soilType === 'medium') Sa_by_g = 2.5;
+        else if (soilType === 'soft') Sa_by_g = 2.5; // Conservative plateau
+
+        const Ah = (Z / 2) * (I / R) * Sa_by_g;
+        const Vb = Ah * buildingWeight_kN;
+
+        return {
+            component: "Seismic",
+            zone,
+            Z,
+            importanceFactor: I,
+            R,
+            soilType,
+            Sa_by_g,
+            Ah: Ah.toFixed(4),
+            buildingWeight_kN,
+            Vb: Vb.toFixed(2),
+            perFloor_approx: (Vb / 3).toFixed(2),
+            note: "IS 1893:2016 Simplified. Assumes short period (T < 0.55s)."
+        };
+    },
 };
 
 window.StructuralCore = StructuralCore;
-console.log("🏛️ Structural Context Builder & Core Engine Locked and Loaded.");
+console.log("🏛️ Structural Core Engine v2.0 — Slab/Beam/Column/Footing/Staircase/Seismic.");

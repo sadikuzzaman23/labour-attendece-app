@@ -78,6 +78,35 @@ body[data-theme="light"] {
     gap: 0.8rem;
 }
 
+.ai-header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.ai-voice-toggle-btn, .ai-settings-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ai-voice-toggle-btn:hover, .ai-settings-btn:hover {
+    background: var(--ai-glow);
+    border-color: var(--ai-primary);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+
 .ai-avatar {
     width: 38px;
     height: 38px;
@@ -112,17 +141,7 @@ body[data-theme="light"] {
 }
 
 .ai-settings-btn {
-    margin-left: auto;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: color 0.2s;
-}
-
-.ai-settings-btn:hover {
-    color: var(--text);
+    font-size: 1rem;
 }
 
 .ai-config-panel {

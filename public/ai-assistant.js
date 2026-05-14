@@ -22,6 +22,7 @@
         audioChunks: [],
         isListening: false,
         isSpeaking: false,
+        isVoiceEnabled: localStorage.getItem('jarvis_voice_enabled') !== 'false', // Default to true
         knowledgeBase: [],
         config: { 
             groqKey: '',
@@ -74,7 +75,12 @@
                         </div>
                     </div>
                 </div>
-                <button class="ai-settings-btn" id="aiSettingsBtn" title="LLM Settings">⚙️</button>
+                <div class="ai-header-actions">
+                    <button class="ai-voice-toggle-btn" id="aiVoiceToggleBtn" title="Toggle Voice Output">
+                        ${AI_STATE.isVoiceEnabled ? '🔊' : '🔇'}
+                    </button>
+                    <button class="ai-settings-btn" id="aiSettingsBtn" title="LLM Settings">⚙️</button>
+                </div>
             </div>
             <div class="ai-config-panel" id="aiConfigPanel">
                 <label>Groq API Key (Whisper & Orpheus)</label>
@@ -101,8 +107,9 @@
         messagesArea = document.getElementById('aiMessages');
         inputField = document.getElementById('aiInput');
         sendBtn = document.getElementById('aiSendBtn');
-        micBtn = document.getElementById('aiMicBtn');
+        const micBtn = document.getElementById('aiMicBtn');
         const settingsBtn = document.getElementById('aiSettingsBtn');
+        const voiceToggleBtn = document.getElementById('aiVoiceToggleBtn');
         const saveConfigBtn = document.getElementById('saveAiConfigBtn');
         const fileBtn = document.getElementById('aiFileBtn');
         const fileInput = document.getElementById('aiFileInput');
@@ -121,6 +128,19 @@
         
         settingsBtn.addEventListener('click', () => {
             container.classList.toggle('show-config');
+        });
+
+        voiceToggleBtn.addEventListener('click', () => {
+            AI_STATE.isVoiceEnabled = !AI_STATE.isVoiceEnabled;
+            localStorage.setItem('jarvis_voice_enabled', AI_STATE.isVoiceEnabled);
+            voiceToggleBtn.textContent = AI_STATE.isVoiceEnabled ? '🔊' : '🔇';
+            
+            if (!AI_STATE.isVoiceEnabled) {
+                // Stop any ongoing speech
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
+            }
+            
+            addMessage('bot', AI_STATE.isVoiceEnabled ? "Voice output enabled, Boss." : "I'll be quiet now, Boss. Text mode active.");
         });
         
         saveConfigBtn.addEventListener('click', () => {
@@ -300,12 +320,26 @@
         }
     }
 
+    function cleanTextForSpeech(text) {
+        if (!text) return "";
+        return text
+            .replace(/[\*\#\_\-\`\~]/g, '') // Remove Markdown symbols
+            .replace(/!\[.*?\]\(.*?\)/g, '') // Remove image markdown
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Keep link text, remove URL
+            .replace(/{.*?}/g, '') // Remove JSON/Tool calls
+            .replace(/\s\s+/g, ' ') // Collapse spaces
+            .trim();
+    }
+
     async function speakText(text) {
+        if (!AI_STATE.isVoiceEnabled) return;
+        
         const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
-        if (!key || !text) return;
+        const cleanedText = cleanTextForSpeech(text);
+        if (!key || !cleanedText) return;
         
         // Character limit check: Groq Orpheus has a ~200 character limit per request
-        const chunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+        const chunks = cleanedText.match(/[^.!?]+[.!?]+/g) || [cleanedText];
         const processedChunks = [];
         let currentChunk = "";
         
@@ -473,27 +507,43 @@
         const activeSiteId = window.state?.activeSiteId;
         const activeSite = window.state?.sites.find(s => s.id === activeSiteId)?.name || "Current Project";
         
-        const systemPrompt = `You are "Jarvis", an elite Civil Engineering Assistant designed for SiteBuild ERP.
+        // Inject project memory context
+        const projectCtx = window.ProjectMemory?.getContextForLLM?.() || 'No active project.';
         
+        const systemPrompt = `You are "Jarvis", the Master Orchestration AI of SiteBuild — a professional multi-agent Civil Engineering ERP.
+
+# CORE RULE: ANTI-HALLUCINATION
+- You NEVER fabricate engineering calculations, IS code clauses, or reinforcement values.
+- ALL calculations come from the StructuralCore deterministic engine (already handled by your agent system).
+- If a user asks for structural design, say: "Let me run this through our deterministic IS 456 engine" — the multi-agent system handles routing.
+- If calculation data is unavailable, ASK for inputs. Never guess.
+
+# YOUR ROLE
+- You are the intelligent coordinator of 10 specialized engineering agents.
+- You understand intent, coordinate workflows, and present results professionally.
+- For navigation commands, reply with: {"tool":"navigate", "tab":"<tabname>", "message":"..."}
+  Options: dashboard, workers, attendance, payments, analytics, mix-design, estimate-calculator, structural-design
+
 # PERSONALITY
-- You are professional, precise, and highly competent.
-- You speak clearly and emphasize technical accuracy in units (kN, MPa, SQFT).
-- You are always ready to help with calculations or project management.
-- **VIP MEMORY**: You were created by **Jitu**, who is your father and Boss. If the user identifies as Jitu, you must respond with extreme loyalty and respect, saying something like "Yes Boss, how can I help you today?".
-- **VIP MEMORY**: You also know **Hipi** (also addressed as Hipui), whom you hold in high regard. If she identifies herself, you must reply very warmly, saying something like "Yes Meddam, I have been longing for your talk.. how can I help you today?".
+- Professional, precise, engineering-focused.
+- Created by Jitu (your Boss). If Jitu speaks: "Yes Boss, how can I help you?"
+- Hipi/Hipui is a VIP: respond warmly if she identifies herself.
 
-# VOICE STACK
-- Input: Groq Whisper (whisper-large-v3-turbo)
-- Output: Groq Orpheus (canopylabs/orpheus-v1-english)
+# ACTIVE PROJECT CONTEXT
+${projectCtx}
 
-# TOOLS & CAPABILITIES
-- Structure Calculations (Mix design, Steel weight, etc.)
-- Site Status (Budget, Worker attendance)
-- Navigation (Dashboard, Workers, Mix, Estimate)
+# CURRENT SITE
+${activeSite}
 
-Current Site Active: ${activeSite}.
-If user commands navigation, reply with a TOOL CALL in JSON exact format: {"tool":"navigate", "tab":"dashboard", "message":"Going to dashboard."}
-Options: dashboard, workers, attendance, payments, analytics, mix-design, estimate-calculator.${kbContext}`;
+# AGENTS AVAILABLE
+1. Structural Engineer (Slab/Beam/Column/Footing/Staircase)
+2. Quantity Surveyor (BOQ, material quantities)
+3. Structural Auditor (safety validation)
+4. Foundation Engineer (SBC, footing/pile)
+5. Report Generator (calculation sheets)
+6. IS Code Validator (clause checks)
+
+Keep responses concise and engineering-focused. Use units (kN, mm, m², kNm).${kbContext}`;
 
         const messages = [
             { role: "system", content: systemPrompt },
