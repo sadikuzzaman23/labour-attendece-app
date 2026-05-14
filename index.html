@@ -72,6 +72,9 @@
                     <button class="tab-btn" data-tab="earthwork-estimator" id="navEarthworkEstimator">
                         <span class="nav-icon">🌍</span> Earthwork Estimator
                     </button>
+                    <button class="tab-btn" data-tab="structural-design" id="navStructuralDesign" style="background: rgba(99,102,241,0.1); border-left: 3px solid var(--accent);">
+                        <span class="nav-icon">🏗️</span> Structural Designer
+                    </button>
                 </nav>
             </aside>
 
@@ -1506,6 +1509,176 @@
                     <iframe src="/EarthworkCalculator.html" style="width: 100%; height: 100%; border: none; border-radius: 12px;"></iframe>
                 </div>
 
+                <!-- ══════════════════════════════════════════
+                     TAB: STRUCTURAL DESIGNER (MANUAL GUI)
+                ══════════════════════════════════════════ -->
+                <div id="tab-structural-design" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2 style="margin-bottom: 0.25rem;">🏗️ Structural Component Designer</h2>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">IS 456:2000 Limit State Deterministic Solver</p>
+                        </div>
+                        <div class="badge" style="background: var(--success-dim); color: var(--success);">Deterministic Core Online</div>
+                    </div>
+
+                    <div class="dashboard-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr 1.2fr;">
+                        
+                        <!-- INPUT WIZARD -->
+                        <section class="glass-panel">
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-outline active" id="guiModeBeam" style="flex:1; border: none; font-size: 0.9rem;">Beam</button>
+                                <button class="btn-outline" id="guiModeColumn" style="flex:1; border: none; font-size: 0.9rem;">Column</button>
+                                <button class="btn-outline" id="guiModeSlab" style="flex:1; border: none; position: relative; font-size: 0.9rem;">
+                                    Slab
+                                </button>
+                                <button class="btn-primary" id="guiModeContext" style="flex:1.5; border: none; position: relative; font-size: 0.9rem; background: linear-gradient(135deg, var(--accent), #8b5cf6);">
+                                    🚀 Context Builder
+                                </button>
+                            </div>
+
+                            <form id="structGuiForm" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                
+                                <!-- General Inputs -->
+                                <div id="sgGeneralDims" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="input-group">
+                                        <label id="sgLabelWidth">Width (b) [mm]</label>
+                                        <input type="number" id="sgWidth" value="230" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label id="sgLabelDepth">Depth (D) [mm]</label>
+                                        <input type="number" id="sgDepth" value="450" required>
+                                    </div>
+                                </div>
+
+                                <!-- Slab Specific Inputs -->
+                                <div id="sgSlabGroup" style="display: none; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="input-group">
+                                        <label>Short Span (Lx) [m]</label>
+                                        <input type="number" id="sgLx" value="3.0" step="0.1">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Long Span (Ly) [m]</label>
+                                        <input type="number" id="sgLy" value="4.0" step="0.1">
+                                    </div>
+                                </div>
+
+                                <!-- Context Builder Specific Inputs -->
+                                <div id="sgContextGroup" style="display: none; flex-direction: column; gap: 1rem;">
+                                    <div class="alert alert-info" style="font-size: 0.85rem; padding: 0.75rem; border-radius: 6px; background: rgba(99,102,241,0.1);">
+                                        Automates full load path: IS-875 Live Loads → Slab → Beam → Column → Footing
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Building Usage (IS-875)</label>
+                                        <select id="sgUsage">
+                                            <option value="residential">Residential (2.0 kN/m²)</option>
+                                            <option value="office">Office / Commercial (4.0 kN/m²)</option>
+                                            <option value="industrial_light">Light Industrial (5.0 kN/m²)</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="input-group">
+                                            <label>Slab Short Span [m]</label>
+                                            <input type="number" id="sgCtxLx" value="4.0" step="0.1">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Slab Long Span [m]</label>
+                                            <input type="number" id="sgCtxLy" value="5.0" step="0.1">
+                                        </div>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Slab Thickness [mm]</label>
+                                        <input type="number" id="sgCtxThick" value="150" step="10">
+                                    </div>
+                                </div>
+
+                                <div id="sgBeamOnlyGroup">
+                                    <div class="input-group">
+                                        <label>Span Length [m]</label>
+                                        <input type="number" id="sgSpan" value="5.0" step="0.1">
+                                    </div>
+                                </div>
+
+                                <div class="input-group">
+                                    <label id="sgLabelLoad">Working Load (Total) [kN/m]</label>
+                                    <input type="number" id="sgLoad" value="25" required step="0.1">
+                                    <small style="color:var(--text-muted)">Auto-factored at 1.5x safely.</small>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="input-group">
+                                        <label>Concrete Grade</label>
+                                        <select id="sgFck">
+                                            <option value="20">M20</option>
+                                            <option value="25">M25</option>
+                                            <option value="30">M30</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Steel Grade</label>
+                                        <select id="sgFy">
+                                            <option value="415">Fe 415</option>
+                                            <option value="500">Fe 500</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="button" id="btnRunManualCalc" class="btn-primary" style="margin-top:1rem; padding: 1rem;">⚡ COMPUTE DESIGN</button>
+                            </form>
+                        </section>
+
+                        <!-- RESULTS & RENDER -->
+                        <section class="glass-panel" style="display: flex; flex-direction: column;">
+                            <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">📝 Technical Report</h3>
+                            
+                            <div id="sgResultPrompt" style="flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; color: var(--text-muted); text-align: center; min-height: 200px;">
+                                <span style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📐</span>
+                                <p>Enter dimensions and click Compute to generate <br> the formal IS 456 design certification.</p>
+                            </div>
+
+                            <div id="sgResultReport" style="display: none; flex: 1; padding-top: 1rem;">
+                                <div id="sgReportHeader" class="alert alert-success" style="padding: 1rem; border-radius: 8px; background: rgba(16,185,129,0.1); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span id="sgStatusIcon">✅</span>
+                                    <strong id="sgStatusText">Section Verified Safe</strong>
+                                </div>
+
+                                <!-- VISUALIZATION CANVAS (Slab Load Paths) -->
+                                <div id="sgCanvasContainer" style="display: none; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); padding: 1rem; margin-bottom: 1.5rem; text-align: center;">
+                                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-light);">Load Transfer Path (Trainee View)</h4>
+                                    <canvas id="sgLoadCanvas" width="300" height="200" style="background: rgba(255,255,255,0.02); border-radius: 4px;"></canvas>
+                                </div>
+
+                                <div class="stats-row" style="grid-template-columns: 1fr 1fr; margin-bottom: 1.5rem;">
+                                    <div class="stat-card" style="background: rgba(0,0,0,0.2); padding: 1rem; border: 1px solid var(--border);">
+                                        <span style="font-size: 0.75rem; color: var(--text-muted);" id="sgResLabel1">Moment (Mu)</span>
+                                        <h3 id="sgResVal1">—</h3>
+                                    </div>
+                                    <div class="stat-card" style="background: rgba(0,0,0,0.2); padding: 1rem; border: 1px solid var(--border);">
+                                        <span style="font-size: 0.75rem; color: var(--text-muted);" id="sgResLabel2">Steel Required (Ast)</span>
+                                        <h3 id="sgResVal2">—</h3>
+                                    </div>
+                                </div>
+
+                                <h4 style="margin-bottom: 0.5rem;">🔩 Reinforcement Schedule</h4>
+                                <div style="background: var(--accent-dim); padding: 1.2rem; border-radius: 8px; border: 1px solid var(--accent); text-align: center;">
+                                    <p style="font-size: 0.85rem; opacity: 0.8;">Recommended Config:</p>
+                                    <h2 id="sgRecMain" style="margin: 0.5rem 0; color: var(--accent-light);">—</h2>
+                                    <p id="sgRecSub" style="font-size: 0.85rem; opacity: 0.7;">—</p>
+                                </div>
+
+                                <div style="margin-top: 1.5rem;">
+                                    <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">🔢 Calculation Breakdown</h4>
+                                    <div id="sgMathBreakdown" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-size: 0.85rem; font-family: monospace; line-height: 1.6;">
+                                        <!-- Math will go here -->
+                                    </div>
+                                </div>
+
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
+
+
                 <!-- Add Load Modal (Slope Deflection) -->
                 <div id="sd-load-modal" class="modal-overlay" style="display:none; z-index: 2000;">
                     <div class="modal-box glass-panel" style="max-width: 400px;">
@@ -1604,6 +1777,9 @@
         <script src="/mix-engine.js"></script>
         <script src="/mix-app.js"></script>
         <script src="/estimate.js"></script>
+        <script src="/structural-core.js"></script>
+        <script src="/structural-gui.js"></script>
+        <script src="/multi-agent-core.js"></script>
         <script src="/ai-assistant.js"></script>
         <script type="module" src="script.js"></script>
 </body>

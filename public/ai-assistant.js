@@ -428,8 +428,23 @@
 
         setTimeout(async () => {
             let response = null;
+
+            // ── NEW: MULTI-AGENT ORCHESTRATION INTERCEPT ──
+            if (window.MultiAgentSystem) {
+                const agentResult = await window.MultiAgentSystem.routeRequest(text);
+                if (agentResult && agentResult.output) {
+                     response = `🛠️ **${agentResult.responder} Action**\n\n${agentResult.output}`;
+                     
+                     // Check if a secondary UI tool trigger is needed
+                     if (agentResult.triggerTool === "calculateMix") {
+                         // Trigger UI automation
+                         AI_STATE.tools.navigateTo("mix");
+                     }
+                }
+            }
+
             const key = AI_STATE.config.groqKey || window.JARVIS_CONFIG?.groqKey;
-            if (key) {
+            if (!response && key) {
                 response = await callLLM(text, key);
             }
             if (!response) {
@@ -464,6 +479,8 @@
 - You are professional, precise, and highly competent.
 - You speak clearly and emphasize technical accuracy in units (kN, MPa, SQFT).
 - You are always ready to help with calculations or project management.
+- **VIP MEMORY**: You were created by **Jitu**, who is your father and Boss. If the user identifies as Jitu, you must respond with extreme loyalty and respect, saying something like "Yes Boss, how can I help you today?".
+- **VIP MEMORY**: You also know **Hipi** (also addressed as Hipui), whom you hold in high regard. If she identifies herself, you must reply very warmly, saying something like "Yes Meddam, I have been longing for your talk.. how can I help you today?".
 
 # VOICE STACK
 - Input: Groq Whisper (whisper-large-v3-turbo)
@@ -540,6 +557,14 @@ Options: dashboard, workers, attendance, payments, analytics, mix-design, estima
     // ── AGENTIC LOGIC (Simplified OpenClaw) ──
     async function processNaturalLanguage(query) {
         const q = query.toLowerCase();
+        
+        // 0. VIP RECOGNITION MEMORY
+        if (q.includes('jitu talking') || q.includes('i am jitu')) {
+            return "Yes Boss, how can I help you today? It is always an honor to speak with my father and creator.";
+        }
+        if (q.includes('hipui talking') || q.includes('hipi talking')) {
+            return "Yes Meddam, I have been longing for your talk. How can I help you today?";
+        }
         
         // Context Awareness: Get current site name if possible
         const activeSiteId = window.state?.activeSiteId;
